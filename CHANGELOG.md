@@ -3,6 +3,7 @@
 ## v1.8.1
 
 - **Settings panel trimmed for self-hosting.** Two settings that only make sense for a public multi-user service behind a proxy have been removed from the panel: the per-client-IP scan limit (an abuse net) and the "trust Cloudflare headers" toggle. A single-user self-hosted install has no use for either.
+- **Legal page rewritten.** Clearer plain-language terms with an explicit acceptance clause (using WayTrace means accepting these terms and the Internet Archive's Terms of Use, which govern the source data), a stronger "as is" disclaimer and limitation of liability, and sole-responsibility wording. The permitted-use list now names journalism, investigation and academic research. Contact for abuse and removal updated. Fixed the "Back to WayTrace" button, whose label was accent-on-accent (invisible) and vertically off-centre.
 
 ## v1.8.0
 

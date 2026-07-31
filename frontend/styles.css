@@ -1931,7 +1931,24 @@
     .legal-page strong { color: var(--text); font-weight: 600; }
     .legal-page a { color: var(--accent); }
     .legal-note { border: 1px solid var(--border); border-radius: 10px; background: var(--surface2); padding: 14px 16px; margin: 14px 0; font-size: 13px; line-height: 1.6; color: var(--text-dim); }
-    .legal-back { display: inline-block; margin-top: 32px; }
+    /* Acceptance clause: the one binding statement on the page, so it carries a
+       faint accent-tinted ground and a slightly stronger text than the note. */
+    .legal-accept {
+      border: 1px solid var(--border); border-radius: 10px;
+      background: var(--accent-glow); padding: 14px 16px; margin: 18px 0 8px;
+      font-size: 14px; line-height: 1.6; color: var(--text);
+    }
+    .legal-accept strong { color: var(--text-bright); font-weight: 600; }
+    /* The button is an <a> inside .legal-page, so `.legal-page a { color: accent }`
+       (class+element) outranks `.btn-accent` (class only) and painted the label
+       the same orange as its fill: invisible. Match that specificity to restore
+       the dark-on-accent label, and keep the .btn flex centering (inline-block
+       dropped the vertical centering). */
+    .legal-page a.legal-back {
+      display: inline-flex; margin-top: 32px;
+      color: var(--accent-text); text-decoration: none;
+    }
+    .legal-page a.legal-back:hover { color: var(--accent-text); }
 
 
     /* My scans (account-backed history view) */

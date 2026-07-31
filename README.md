@@ -323,12 +323,12 @@ Every extraction category ships dedicated positive and false-positive tests (at 
 
 WayTrace reads **only public archives** from the Wayback Machine. It performs no active scanning, port scanning, brute-forcing, or DNS enumeration, and sends nothing to the target.
 
-- It is built for legitimate security research, OSINT investigations, due diligence, and competitive intelligence.
+- It is built for legitimate security research, OSINT investigations, journalism, and academic or historical research.
+- All source data comes from the Internet Archive. By using WayTrace you also agree to the [Internet Archive's Terms of Use](https://archive.org/about/terms.php); do not flood requests or try to bypass rate limits.
 - Archived pages can contain personal data; there is no general exemption for public personal data under the GDPR. Handle what you find responsibly, and report risks to the people who own the data, never against them.
-- You are solely responsible for how you use the results.
-- Respect [archive.org's terms](https://archive.org/about/terms.php); do not flood requests or try to bypass rate limits.
+- You are solely responsible for how you use WayTrace and its results. The software is provided "as is", without warranty, and the author disclaims liability to the maximum extent permitted by law.
 
-Abuse reports and removal requests: [legal@waytrace.org](mailto:legal@waytrace.org).
+Abuse reports and removal requests: [housset.thomas@pm.me](mailto:housset.thomas@pm.me).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) to build a new extraction category, and [CHANGELOG.md](CHANGELOG.md) for the release history.
 

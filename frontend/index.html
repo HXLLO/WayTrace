@@ -262,15 +262,22 @@
 <div id="view-legal" class="view">
   <div class="legal-page">
     <h1 data-i18n="legal.title">Legal, licence & acceptable use</h1>
-    <p class="legal-updated" data-i18n="legal.updated">Last updated 2026-06 · WayTrace</p>
+    <p class="legal-updated" data-i18n="legal.updated">Last updated 2026-07 · WayTrace</p>
 
     <div class="legal-note" data-i18n-html="legal.note">
       WayTrace is an OSINT recon tool. It reads only what the
       Internet Archive (Wayback Machine) has <strong>already</strong> publicly
       archived. It performs <strong>no active scanning, probing or login</strong>
       against any target site, sends no traffic to the target, and adds nothing
-      that was not already public. This page is provided for transparency and is
-      not legal advice.
+      that was not already public. This page is written in plain language for
+      transparency; it is not legal advice.
+    </div>
+
+    <div class="legal-accept" data-i18n-html="legal.accept">
+      <strong>By accessing or using WayTrace, you agree to these terms and to the
+      <a href="https://archive.org/about/terms.php" target="_blank" rel="noopener">Internet
+      Archive's Terms of Use</a>, which govern the source data.</strong> If you do
+      not agree, do not use WayTrace.
     </div>
 
     <h2 data-i18n="legal.h1">1. What WayTrace does</h2>
@@ -286,7 +293,7 @@
     <ul>
       <li data-i18n="legal.p2.li1">education and learning about open-source intelligence;</li>
       <li data-i18n="legal.p2.li2">authorised security research and defensive security (your own assets, or with permission);</li>
-      <li data-i18n="legal.p2.li3">due diligence, journalism, and fraud / threat investigation you are entitled to conduct;</li>
+      <li data-i18n="legal.p2.li3">journalism, investigation, and threat / fraud research you are entitled to conduct;</li>
       <li data-i18n="legal.p2.li4">historical and academic research on the public web.</li>
     </ul>
 
@@ -299,46 +306,55 @@
       <li data-i18n="legal.p3.li4">conduct surveillance or profiling that infringes another person's rights;</li>
       <li data-i18n="legal.p3.li5">any other illegal or abusive activity.</li>
     </ul>
-    <p data-i18n="legal.p3b">Accounts used to facilitate any of the above may be suspended or terminated.</p>
+    <p data-i18n="legal.p3b">Access used to facilitate any of the above may be blocked, and abuse may be reported to the relevant authorities.</p>
 
     <h2 data-i18n="legal.h4">4. Your responsibility</h2>
-    <p data-i18n-html="legal.p4">You are solely responsible for how you use WayTrace and its results, and for
-    complying with all laws that apply to you and to the subject of your research,
-    including in the subject's jurisdiction. Where results contain personal data,
-    <strong>you</strong> act as the data controller for any further processing you
-    perform.</p>
+    <p data-i18n-html="legal.p4">You alone decide what to scan and what to do with the results, and
+    <strong>you bear sole responsibility for that use.</strong> You must comply with
+    every law that applies to you and to the subject of your research, including in
+    the subject's jurisdiction. Where results contain personal data, <strong>you</strong>
+    act as the data controller for any further processing you perform. WayTrace only
+    surfaces data a third party had already made public; it does not make that use
+    lawful in your hands.</p>
 
     <h2 data-i18n="legal.h5">5. Personal data (GDPR / RGPD)</h2>
     <p data-i18n-html="legal.p5">Archived pages can contain personal data (for example email addresses or
     names). There is no general exemption for publicly available personal data
     under the GDPR. WayTrace minimises exposure by design: it processes only data
     already archived publicly, performs no enrichment beyond those pages, retains
-    finished scans for a limited period (7 days on the hosted service), and relies
-    on a <strong>legitimate-interest</strong> basis (security research and web
-    transparency). Data subjects may request removal of a scan (see
-    Contact). On the hosted service, running a scan requires an account;
-    viewing a scan by its link stays open.</p>
+    finished scans for a limited period on the hosted service, and relies on a
+    <strong>legitimate-interest</strong> basis (security research and web
+    transparency) balanced against the rights of data subjects. Data subjects may
+    request removal of a scan (see Contact).</p>
 
-    <h2 data-i18n="legal.h6">6. Source data & third parties</h2>
-    <p data-i18n-html="legal.p6">All snapshots originate from the Internet Archive. Their availability,
-    accuracy and completeness are outside WayTrace's control; results may be
-    partial or out of date (archive gaps). Please also respect the
-    <a href="https://archive.org/about/terms.php" target="_blank" rel="noopener">Internet Archive's terms</a>.</p>
+    <h2 data-i18n="legal.h6">6. Source data & the Internet Archive</h2>
+    <p data-i18n-html="legal.p6">Every snapshot comes from the Internet Archive. WayTrace neither hosts nor
+    controls that data, and its availability, accuracy and completeness are outside
+    WayTrace's control; results may be partial or out of date (archive gaps).
+    Your use of the archived data is also governed by the
+    <a href="https://archive.org/about/terms.php" target="_blank" rel="noopener">Internet
+    Archive's Terms of Use</a>, which you accept by using WayTrace: do not flood
+    requests or attempt to bypass rate limits. To have a page removed from the
+    archive itself, contact the Internet Archive directly.</p>
 
     <h2 data-i18n="legal.h7">7. Licence</h2>
     <p data-i18n-html="legal.p7">WayTrace is open source under the <strong>MIT Licence</strong>. You may
     self-host it; the self-hosted build has no hosted-service snapshot ceiling and
     can scan a domain in full. The software is provided <strong>"AS IS", without
-    warranty of any kind</strong>; see the LICENSE file in the repository.</p>
+    warranty of any kind</strong>, express or implied; see the LICENSE file in the
+    repository.</p>
 
-    <h2 data-i18n="legal.h8">8. Disclaimer of liability</h2>
-    <p data-i18n="legal.p8">WayTrace is provided as a research aid without warranty. To the maximum
-    extent permitted by law, the operator is not liable for any use, misuse, or
-    reliance on the tool or its output, nor for the content of archived pages.</p>
+    <h2 data-i18n="legal.h8">8. Disclaimer & limitation of liability</h2>
+    <p data-i18n-html="legal.p8">WayTrace is provided as a research aid, <strong>"as is" and "as available",
+    without warranty of any kind.</strong> To the maximum extent permitted by law,
+    the author and operator disclaim all liability for any direct, indirect,
+    incidental or consequential damage arising from the use of, misuse of, or
+    reliance on the tool or its output, and for the content of archived pages.
+    <strong>You use WayTrace at your own risk.</strong></p>
 
     <h2 data-i18n="legal.h9">9. Contact / abuse / removal</h2>
-    <p data-i18n-html="legal.p9">Abuse reports and removal requests: <a href="mailto:legal@waytrace.org">legal@waytrace.org</a>.
-    We review legitimate requests and can unpublish or delete a scan.</p>
+    <p data-i18n-html="legal.p9">Abuse reports and removal requests: <a href="mailto:housset.thomas@pm.me">housset.thomas@pm.me</a>.
+    Legitimate requests are reviewed, and a hosted scan can be deleted on request.</p>
 
     <a href="#/" class="btn btn-accent legal-back" data-i18n="legal.back">Back to WayTrace</a>
   </div>

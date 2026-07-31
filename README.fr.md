@@ -323,12 +323,12 @@ Chaque catégorie d'extraction embarque des tests positifs et de faux positifs d
 
 WayTrace lit **uniquement les archives publiques** de la Wayback Machine. Il ne fait aucun scan actif, aucun scan de port, aucun brute force, aucune énumération DNS, et n'envoie rien à la cible.
 
-- Il est conçu pour la recherche en sécurité légitime, les enquêtes OSINT, la due diligence et l'intelligence économique.
+- Il est conçu pour la recherche en sécurité légitime, les enquêtes OSINT, le travail journalistique et la recherche académique ou historique.
+- Toutes les données source proviennent de l'Internet Archive. En utilisant WayTrace, vous acceptez également les [conditions d'utilisation de l'Internet Archive](https://archive.org/about/terms.php) ; n'inondez pas de requêtes et ne cherchez pas à contourner les limites.
 - Les pages archivées peuvent contenir des données personnelles ; il n'existe pas d'exemption générale pour les données personnelles publiques au titre du RGPD. Manipulez ce que vous trouvez de façon responsable, et signalez les risques aux personnes qui possèdent les données, jamais contre elles.
-- Vous êtes seul responsable de l'usage que vous faites des résultats.
-- Respectez les [conditions d'archive.org](https://archive.org/about/terms.php) ; n'inondez pas de requêtes et ne cherchez pas à contourner les limites.
+- Vous êtes seul responsable de l'usage que vous faites de WayTrace et de ses résultats. Le logiciel est fourni « en l'état », sans garantie, et l'auteur décline toute responsabilité dans la mesure permise par la loi.
 
-Signalements d'abus et demandes de retrait : [legal@waytrace.org](mailto:legal@waytrace.org).
+Signalements d'abus et demandes de retrait : [housset.thomas@pm.me](mailto:housset.thomas@pm.me).
 
 Voir [CONTRIBUTING.md](CONTRIBUTING.md) pour ajouter une catégorie d'extraction, et [CHANGELOG.md](CHANGELOG.md) pour l'historique des versions.
 
