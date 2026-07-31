@@ -2,19 +2,21 @@
 
 Base URL: `http://localhost:8000`
 
-Interactive docs: `http://localhost:8000/docs` (Swagger UI)
+Interactive docs: set `EXPOSE_API_DOCS=1` in `.env`, then open
+`http://localhost:8000/api/docs` (Swagger UI). Hidden by default.
 
 ---
 
-## POST /api/scan/preflight
+## Scanning
 
-Lightweight domain analysis, fetches CDX index only (~2-5s) and returns stats + suggested configuration.
+### POST /api/scan/preflight
+
+Lightweight domain analysis: fetches the CDX index only (a few seconds) and
+returns stats plus a suggested configuration. No page is downloaded.
 
 **Request body:**
 ```json
-{
-  "domain": "example.com"
-}
+{ "domain": "example.com" }
 ```
 
 **Success response (200):**
@@ -24,171 +26,107 @@ Lightweight domain analysis, fetches CDX index only (~2-5s) and returns stats + 
   "total_snapshots": 47404,
   "html_snapshots": 47404,
   "unique_paths": 971,
-  "date_range": {
-    "first": "2003-08",
-    "last": "2026-03"
-  },
-  "suggested_config": {
-    "cap": 800,
-    "date_from": null,
-    "date_to": null,
-    "depth": "standard"
-  }
+  "unique_content": 8120,
+  "date_range": { "first": "2003-08", "last": "2026-03" },
+  "suggested_config": { "depth": "standard", "cap": 800 },
+  "path_groups": [ ... ],
+  "subdomain_groups": [ ... ]
 }
 ```
 
-**Example:**
-```bash
-curl -X POST http://localhost:8000/api/scan/preflight \
-  -H "Content-Type: application/json" \
-  -d '{"domain": "example.com"}'
-```
+### POST /api/scan
 
----
-
-## POST /api/scan
-
-Start a new domain scan. Optionally provide a config to override defaults.
+Submit a full scan. Returns immediately with a job id and the public `url_id`
+of the future report; the scan itself runs through the queue.
 
 **Request body:**
 ```json
 {
   "domain": "example.com",
   "config": {
+    "depth": "standard",
     "cap": 500,
-    "date_from": "2020-01",
-    "date_to": null,
-    "depth": "standard"
+    "date_from": "2015-01",
+    "date_to": "2026-01",
+    "exclude_keywords": ["blog"],
+    "categories": ["emails", "subdomains"]
   }
 }
 ```
-
-`config` is entirely optional. If omitted, smart defaults are used.
-
-**Config fields:**
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `cap` | int \| null | auto-computed | Max snapshots to scrape |
-| `date_from` | string \| null | null | Start date filter (`"YYYY-MM"`) |
-| `date_to` | string \| null | null | End date filter (`"YYYY-MM"`) |
-| `depth` | string | `"standard"` | Preset: `"quick"`, `"standard"`, or `"full"` |
-
-**Depth presets:**
-
-| Preset | Cap multiplier | Sampling strategy |
-|--------|---------------|-------------------|
-| `quick` | ×0.3 (min 20) | First + last per path only |
-| `standard` | ×1.0 | Monthly homepage, semester for high-priority, yearly for medium |
-| `full` | ×1.5 (max 1200) | Monthly for homepage + high-priority, semester for medium |
-
-**Validation rules:**
-- Must be a valid domain (no IPs, no `http://` prefix)
-- `www.` prefix and trailing slashes are stripped automatically
+Everything except `domain` is optional. `depth` is one of `quick`,
+`standard`, `full`, `max`.
 
 **Success response (200):**
 ```json
 {
-  "job_id": "550e8400-e29b-41d4-a716-446655440000"
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "url_id": "a1b2c3d4e5f6a7b8c9d0e1f2",
+  "url": "/s/a1b2c3d4e5f6a7b8c9d0e1f2",
+  "status": "queued",
+  "position": 0,
+  "eta_seconds": 0,
+  "reused": false,
+  "live": false,
+  "retention_days": 14
 }
 ```
 
-**Error responses:**
-- `422`: Invalid domain format
-- `429`: Too many active jobs
+`reused: true` means a recent scan of the same domain already existed and was
+returned instead of re-scanning (send `"force": true` to bypass). If the
+domain is already being scanned right now, you are attached to that live scan
+(`reused` + `live` both true).
 
-**Deduplication:** If a job for the same domain is already `queued` or `running`, the existing `job_id` is returned.
+### GET /api/jobs/{job_id}
 
-**Example:**
-```bash
-curl -X POST http://localhost:8000/api/scan \
-  -H "Content-Type: application/json" \
-  -d '{"domain": "example.com", "config": {"depth": "full", "date_from": "2020-01"}}'
-```
+Poll a scan's progress. Returns status (`queued` / `running` / `completed` /
+`failed` / `cancelled`), `progress` (0-100), the current `step`, queue
+`position` / `eta_seconds` while waiting, and the full `results` object once
+completed.
 
----
+### GET /api/jobs/{job_id}/stream
 
-## GET /api/jobs/{job_id}
+Same information as Server-Sent Events, for clients that prefer push over
+polling.
 
-Get the current status and results of a scan job.
+## Reports (by url_id)
 
-**Path parameters:**
-- `job_id` (string, required), UUID returned by POST /api/scan
+A finished scan is addressed by its 24-char `url_id`; knowing it is the only
+capability needed.
 
-**Success response (200):**
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "domain": "example.com",
-  "status": "completed",
-  "progress": 100,
-  "step": "Scan complete",
-  "created_at": "2024-01-01T00:00:00Z",
-  "updated_at": "2024-01-01T00:05:00Z",
-  "meta": {
-    "domain": "example.com",
-    "total_snapshots_found": 47404,
-    "snapshots_analyzed": 800,
-    "pages_scraped": 782,
-    "pages_failed": 18,
-    "date_first_seen": "2003-08",
-    "date_last_seen": "2026-03",
-    "scan_duration_seconds": 312.5
-  },
-  "results": {
-    "endpoints": [],
-    "emails": [],
-    "phones": [],
-    "subdomains": [],
-    "analytics_trackers": [],
-    "social_profiles": [],
-    "persons": [],
-    "technologies": [],
-    "outgoing_links": [],
-    "built_with": [],
-    "html_comments": [],
-    "cloud_buckets": [],
-    "api_keys": [],
-    "script_sources": [],
-    "form_actions": [],
-    "crypto_wallets": [],
-    "iframe_sources": [],
-    "meta_tags": [],
-    "highlights": []
-  }
-}
-```
+| Method and path | Description |
+|---|---|
+| `GET /api/s/{url_id}` | Full report payload (findings, meta, timeline). |
+| `GET /api/s/{url_id}/search?q=...` | Full-text search inside the scan's archived pages. |
+| `GET /api/s/{url_id}/export.html` | Standalone HTML report (offline viewing). |
+| `GET /api/s/{url_id}/export.json` | Raw findings as JSON. |
+| `GET /api/s/{url_id}/export.csv` | Findings as CSV. |
+| `DELETE /api/s/{url_id}` | Cancel (if running) and permanently delete the scan. |
+| `GET /api/local-scans` | Every scan this instance has run (self-hosted history). |
+| `GET /api/example-scan` | `url_id` of the configured demo scan, if any. |
 
-**Job statuses:** `queued` → `running` → `completed` | `failed`
+## Status
 
-**Error responses:**
-- `404`: Job not found or expired
+| Method and path | Description |
+|---|---|
+| `GET /api/health` | `{ status, active_jobs, uptime_seconds, version }`. |
+| `GET /api/stats` | Total scans run + active jobs. |
+| `GET /api/service-status` | One-call status for the frontend banner: archive.org health, own load, maintenance flag. |
+| `GET /api/archive-status` | archive.org reachability details. |
 
----
+## Self-host configuration
 
-## GET /api/health
+The Settings panel in the UI is backed by:
 
-Health check endpoint.
+| Method and path | Description |
+|---|---|
+| `GET /api/config` | Current values, descriptions, bounds and risk zones for every editable setting. |
+| `PUT /api/config` | Apply new values (persisted in SQLite, applied live). |
+| `POST /api/config/reset` | Back to safe defaults. |
+| `POST /api/config/restart` | Restart the server process. |
+| `POST /api/config/complete-setup` | Mark the first-run wizard as done. |
 
-**Response:**
-```json
-{
-  "status": "ok",
-  "active_jobs": 2,
-  "uptime_seconds": 3600.5
-}
-```
+## Errors
 
----
-
-## GET /api/stats
-
-Server statistics.
-
-**Response:**
-```json
-{
-  "total_scans_run": 42,
-  "active_jobs": 1
-}
-```
+Errors follow FastAPI conventions: `{ "detail": ... }` with 404 (unknown job
+or scan), 410 (scan expired), 422 (validation), 429 (queue or per-IP limit)
+and 503 (maintenance / archive.org down).

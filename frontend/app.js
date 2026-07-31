@@ -193,7 +193,7 @@ function toggleTheme() {
   else document.documentElement.removeAttribute('data-theme');
   try { localStorage.setItem('wt_theme', next); } catch (_) {}
   applyThemeLabel();
-  // Re-emit the palette for the new mode and remember it on the account.
+  // Re-emit the palette for the new mode and persist the preference.
   applyThemeVars();
   const p = currentThemePref();
   if (p) { p.mode = next; setThemePref(p); }
@@ -205,8 +205,7 @@ applyThemeLabel();
    and an accent hex per mode; every other color (surfaces, borders, accent
    ramp) is derived so any seed yields a coherent UI. The computed variables
    are cached in localStorage (wt_theme_vars) so the boot script can restore
-   them before first paint, and mirrored on the account so a sign-in brings
-   the theme to any device. */
+   them before first paint. */
 
 const THEME_MANAGED_VARS = [
   '--bg', '--surface', '--surface2', '--surface3', '--border', '--border-hover',
@@ -344,7 +343,7 @@ function applyThemeVars() {
 }
 
 // Persist locally (pref + precomputed vars for the boot script), apply, and
-// mirror on the account when signed in. `pref === null` resets to the default.
+// persist the chosen theme. `pref === null` resets to the default.
 function setThemePref(pref, opts) {
   try {
     if (pref) {
@@ -506,11 +505,7 @@ const I18N = {
   fr: {
     'nav.history': 'Historique',
     'nav.settings': 'Réglages',
-    // --- account menu, 404, export drawer, scope intro (added i18n pass) ---
-    'menu.myscans': 'Mes scans',
-    'menu.appearance': 'Apparence',
-    'menu.admin': 'Panneau admin',
-    'menu.signout': 'Se déconnecter',
+    // --- 404, export drawer, scope intro (added i18n pass) ---
     'notfound.title': 'Page introuvable',
     'notfound.sub': "Cette page n'existe pas ou a été déplacée.",
     'exp.format': 'Format',
@@ -519,7 +514,6 @@ const I18N = {
     'Markdown': 'Markdown', 'JSON': 'JSON', 'CSV': 'CSV', 'pages': 'pages',
     'Timeline &amp; density': 'Chronologie et densité',
     'scope.intro': "WayTrace ne lit que ce que la <b>Wayback Machine</b> a déjà archivé pour ce domaine. archive.org est limité en débit, donc un scan échantillonne un ensemble représentatif de snapshots plutôt que chaque capture. Réglez le scan ci-dessous, puis lancez : <b>1</b> choisir les sous-domaines, <b>2</b> écarter les pages bruyantes, <b>3</b> régler la plage de dates et la densité. Une sélection plus large veut dire un scan plus long.",
-    'scope.intro.cap': "Sur le service hébergé, un scan est plafonné à <b id=\"scope-intro-cap\"></b> snapshots.",
     // --- toasts / confirms / errors that were hardcoded in JS ---
     'Copy failed': 'Échec de la copie',
     'Copy failed. URL: ': 'Échec de la copie. URL : ',
@@ -530,33 +524,14 @@ const I18N = {
     'Secret copied': 'Secret copié',
     'URI copied': 'URI copiée',
     'Type a domain first.': "Saisissez d'abord un domaine.",
-    'Create an account to run a scan.': 'Créez un compte pour lancer un scan.',
     'Error: ': 'Erreur : ',
     'Failed: ': 'Échec : ',
     'Network error: ': 'Erreur réseau : ',
     'No screenshot': 'Aucune capture',
     'Cancel this scan?': 'Annuler ce scan ?',
     'Delete this scan permanently?': 'Supprimer définitivement ce scan ?',
-    // auth
-    'Enter a valid email first.': "Saisissez d'abord un e-mail valide.",
-    'Network error. Try again.': 'Erreur réseau. Réessayez.',
-    'Password must be at least 8 characters.': 'Le mot de passe doit faire au moins 8 caractères.',
-    'Please complete the verification and try again.': 'Complétez la vérification et réessayez.',
-    // admin (hosted)
-    '2FA enabled': 'A2F activée',
-    'Account deleted': 'Compte supprimé',
-    'Ban failed: ': 'Échec du bannissement : ',
-    'Ban removed': 'Bannissement retiré',
-    'Enter a value to ban': 'Saisissez une valeur à bannir',
-    'Error: could not set maintenance (': 'Erreur : impossible de régler la maintenance (',
-    'Signed out.': 'Déconnecté.',
-    'Status updated': 'Statut mis à jour',
-    'Update failed': 'Échec de la mise à jour',
-    'Delete account ': 'Supprimer définitivement le compte ',
-    'Delete bug report #': 'Supprimer le rapport de bug #',
     'themes.title': 'Apparence',
     'themes.sub': "Choisissez un thème, ou composez le vôtre. Chaque thème a un visage sombre et un visage clair; le bouton Light/Dark de la barre de navigation bascule entre les deux. Votre choix est enregistré dans ce navigateur.",
-    'themes.subacct': "Connecté, votre thème est enregistré sur votre compte et vous suit sur tous vos appareils.",
     'themes.custom': 'Palette personnalisée',
     'themes.customsub': "Choisissez un fond et un accent pour chaque mode; surfaces, bordures et surlignages sont dérivés automatiquement pour que le résultat reste cohérent.",
     'themes.darkface': 'Visage sombre',
@@ -661,7 +636,6 @@ const I18N = {
     'Verbosity of the server logs.': 'Verbosité des journaux du serveur.',
     'Comma-separated origins allowed to call the API.': "Origines autorisées à appeler l'API, séparées par des virgules.",
     'Largest accepted request body.': "Taille maximale d'un corps de requête accepté.",
-    'nav.signin': 'Connexion',
     'nav.scan': 'Analyser',
     'home.status.label': 'Statut du service',
     'Operational': 'Opérationnel',
@@ -675,7 +649,6 @@ const I18N = {
     'home.tagline': "Internet n'oublie jamais.",
     'home.sub': "Outil d'OSINT pour chercheurs et professionnels. Révélez ce qu'un domaine a exposé au fil du temps (e-mails, sous-domaines, technos, fuites) depuis les archives de la <a href=\"https://web.archive.org\" target=\"_blank\" rel=\"noopener\">Wayback Machine</a>.",
     'home.scan': 'Analyser',
-    'home.publish': 'Publier dans le flux public à la fin de ce scan',
     'home.adv.summary': 'Pré-filtres (optionnel)',
     'home.adv.exclude': 'Exclure les URL contenant',
     'home.adv.daterange': 'Plage de dates',
@@ -749,7 +722,6 @@ const I18N = {
     'Search the archived pages': 'Chercher dans les pages archivées',
     'Copied': 'Copié',
     'home.provenance': "Outil OSINT open source.",
-    'home.provenance.hosted': "La version hébergée limite le nombre de snapshots par scan ; auto-hébergez-la depuis GitHub pour analyser un domaine en entier.",
     'home.ethic': "Conçu pour les chercheurs en sécurité, les équipes, les journalistes et les professionnels curieux. Utilisez ce que vous trouvez de façon responsable : signalez les risques aux personnes qui possèdent les données, jamais contre elles.",
     'home.historybtn': 'Historique des scans',
     'home.mrp.all': 'Toutes les dates',
@@ -791,22 +763,6 @@ const I18N = {
     'legal.h9': '9. Contact / abus / retrait',
     'legal.p9': "Signalements d'abus et demandes de retrait : <a href=\"mailto:housset.thomas@pm.me\">housset.thomas@pm.me</a>. Les demandes légitimes sont examinées, et un scan hébergé peut être supprimé sur demande.",
     'legal.back': 'Retour à WayTrace',
-    // --- Auth modal + account (English text used as the key) ---
-    'Email': 'E-mail',
-    'Email me a sign-in link': 'Recevoir un lien de connexion par e-mail',
-    'No password. We send a one-tap link to your inbox.': 'Sans mot de passe. Nous envoyons un lien en un clic dans votre boîte.',
-    'or use a password': 'ou utiliser un mot de passe',
-    'Continue with password': 'Continuer avec un mot de passe',
-    'New here? Either option creates your account. We email a verification link you can confirm anytime.': "Nouveau ici ? Chaque option crée votre compte. Nous envoyons un lien de vérification que vous pouvez confirmer à tout moment.",
-    'Check your inbox': 'Vérifiez votre boîte de réception',
-    'Use a different email': 'Utiliser une autre adresse',
-    'Password (min 8 characters)': 'Mot de passe (8 caractères min)',
-    'Sign in': 'Connexion',
-    'Sign in or create an account': 'Connectez-vous ou créez un compte',
-    'Create your account to scan': 'Créez votre compte pour analyser',
-    'Scanning is free. An account just keeps your scans tied to you, private.': "L'analyse est gratuite. Le compte relie simplement vos scans à vous, en privé.",
-    'Sign in or create your account': 'Connectez-vous ou créez votre compte',
-    'One account to run scans and keep your history. Your scans stay private to you.': 'Un compte pour lancer des scans et garder votre historique. Vos scans restent privés.',
     // --- Scope / scan journey (static labels) ---
     'Subdomains': 'Sous-domaines',
     'filter subdomains…': 'filtrer les sous-domaines…',
@@ -905,8 +861,6 @@ const I18N = {
     'Delete scan': 'Supprimer le scan',
     'Delete this scan permanently? This cannot be undone.': 'Supprimer définitivement ce scan ? Cette action est irréversible.',
     'Delete?': 'Supprimer ?', 'Delete': 'Supprimer', 'Keep': 'Conserver', 'took': 'a pris',
-    "Email me when it's done": 'Me prévenir par e-mail à la fin',
-    'Off by default. We send a link to your account email once the scan finishes, handy for long scans.': 'Désactivé par défaut. Nous envoyons un lien à l’adresse de votre compte une fois le scan terminé, pratique pour les longs scans.',
     // --- Scope dynamic (density labels/hints) ---
     'Light': 'Léger', 'Fast': 'Rapide', 'Balanced': 'Équilibré', 'Dense': 'Dense', 'Deep': 'Profond', 'Max': 'Max',
     '~2 snapshots/year, quick skim': '~2 snapshots/an, survol rapide',
@@ -1074,7 +1028,6 @@ function setLang(l) {
   });
   applyI18n();
   // Re-render the few dynamic strings that JS sets directly.
-  try { if (typeof renderAccountControl === 'function') renderAccountControl(); } catch (_) {}
   try {
     const adv = document.getElementById('scope-adv');
     if (adv && adv.style.display !== 'none' && typeof onScopeDensity === 'function') {
@@ -1512,7 +1465,7 @@ function navigate(hash) {
   // 'results' stays here (not in `valid`): the public flow reuses view-results,
   // so navigate() must still deactivate it when leaving, even though there is no
   // longer a /#/results route.
-  const views = ['home', 'scope', 'results', 'history', 'scan-public', 'legal', 'themes', 'config', 'setup', 'admin', 'notfound'];
+  const views = ['home', 'scope', 'results', 'history', 'scan-public', 'legal', 'themes', 'config', 'setup', 'notfound'];
 
   views.forEach(v => {
     const el = $('view-' + v);
@@ -1521,7 +1474,6 @@ function navigate(hash) {
 
   $('history-btn').classList.toggle('active', view === 'history');
   stopPublicScanPolling();
-  if (view !== 'admin') { try { _stopAdminMon(); } catch (_) {} }
   // Clear v2 public mode when navigating away from /s/{url_id}.
   if (view !== 'scan-public') v2PublicMode = false;
 
@@ -1578,9 +1530,9 @@ function startAdvancedScan() {
     document.querySelector('.home-search-input')?.focus();
     return;
   }
-  // Minimalist homepage: no pre-filters here. Subdomains, pages, exact dates,
-  // density and the publish choice are all set on the next (scope) step, which
-  // keeps its own defaults (publish pre-checked).
+  // Minimalist homepage: no pre-filters here. Subdomains, pages, exact dates
+  // and density are all set on the next (scope) step, which keeps its own
+  // defaults.
   _pendingScopePrefill = null;
   _forceRescan = false;   // a fresh homepage scan honours the guardrail
   location.hash = '#/scope/' + encodeURIComponent(raw);
@@ -1756,7 +1708,7 @@ async function pollPublicScan() {
     if (resp.status === 404) { renderPublicScanNotFound(); return; }
     if (resp.status === 410) { renderPublicScanExpired(); return; }
     if (!resp.ok) {
-      // Transient backend hiccup (502/503/429 from Caddy under load, etc.).
+      // Transient backend hiccup (502/503/429 from the proxy under load, etc.).
       // A long scan keeps running server-side; if we stop polling here the
       // view freezes on the last % forever even though the scan completes.
       // Keep polling so the page advances to results on its own.
@@ -2571,8 +2523,8 @@ async function loadScope(domain) {
   }
 }
 
-// Carry the homepage pre-filters (exclude keywords, date range, publish) into
-// the scope step as defaults the user can still change.
+// Carry the homepage pre-filters (exclude keywords, date range) into the
+// scope step as defaults the user can still change.
 function _applyScopePrefill() {
   const p = _pendingScopePrefill;
   _pendingScopePrefill = null;
@@ -2608,7 +2560,7 @@ function showFallbackScopeUI(domain, detailMsg) {
   // Preflight failed (usually a huge domain the bounded 60s preflight could
   // not enumerate). The scan itself has a longer budget, so still offer a
   // launch - minus the subdomain/timeline pickers we have no data for. The
-  // keyword blacklist + publish toggle stay useful and apply server-side.
+  // keyword blacklist stays useful and applies server-side.
   scopeFallback = true;
   scopeSubdomains = [];
   _scopePathGroups = [];
@@ -4582,8 +4534,8 @@ function restoreFocus() {
 
 /* ===== HISTORY ===== */
 async function loadHistory() {
-  // v2: the History view is now "My scans" backed by the account. The legacy
-  // v1 domains table is hidden in public mode.
+  // v2: the History view is now "My scans". The legacy v1 domains table is
+  // hidden in public mode.
   await renderMyScans();
 }
 
@@ -4591,8 +4543,8 @@ async function renderMyScans() {
   const host = $('my-scans');
   if (!host) return;
 
-  // Solo / self-hosted build: list EVERY scan this instance has run (published
-  // or not) - it's a single-user install, so they are all yours.
+  // Solo / self-hosted build: list EVERY scan this instance has run - it's a
+  // single-user install, so they are all yours.
   host.innerHTML = '<div class="myscans-note">' + t('Loading your scans…') + '</div>';
   let items = [];
   try { const r = await fetch(API + '/api/local-scans?limit=50'); const d = await r.json(); items = d.scans || []; } catch (_) {}

@@ -159,7 +159,7 @@ def test_success_clears_hard_flag_after_cooldown():
 
 
 def test_intermittent_refusals_still_trip_the_breaker():
-    # The 2600.eu case: refusals interleaved with successes. A success used to
+    # Observed in the field: refusals interleaved with successes. A success used to
     # reset the hard-fail streak, so it never tripped. It must now trip.
     ah.record_hard_block()
     ah.record_success()

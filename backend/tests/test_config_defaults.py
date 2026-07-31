@@ -4,7 +4,7 @@ from config import Settings
 
 def test_antiblock_and_queue_defaults():
     s = Settings()
-    # Rate ceiling sits below the ~105/min refusal point measured on 2600.eu.
+    # Rate ceiling sits below the ~105/min refusal point measured during tuning.
     assert s.archive_rate_max == 80
     assert s.archive_rate_per_minute <= s.archive_rate_max
     # One scan at a time, deep fair waiting queue, small per-IP abuse net.

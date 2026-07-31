@@ -39,7 +39,7 @@ from services.filters import (
 )
 from services.ip_utils import get_client_ip
 from services.scraper import scrape_snapshots
-from store import store, PerIpLimitError, PerUserLimitError, QueueFullError
+from store import store, PerIpLimitError, QueueFullError
 
 router = APIRouter(prefix="/api", tags=["scan"])
 
@@ -615,9 +615,9 @@ async def create_scan(body: JobCreate, request: Request):
             )
 
     # Guardrail: if we already have a recent completed scan for this domain
-    # (any account: the same public-archive data either way), return it instead
-    # of re-scanning (which would re-hammer archive.org for a domain we already
-    # have). "Scan more" sets force=True to run a fresh, denser scan.
+    # (whoever ran it: the same public-archive data either way), return it
+    # instead of re-scanning (which would re-hammer archive.org for a domain we
+    # already have). "Scan more" sets force=True to run a fresh, denser scan.
     if not body.force and not body.selected_snapshots:
         from db import find_recent_scan_for_domain
         try:

@@ -99,7 +99,7 @@ def extract_meta_info(tree: HTMLParser, month: str, accum: dict) -> None:
 
     # The HTML <title> goes into its own bucket so investigators can read the
     # page-title history without the viewport/robots/og noise that clutters
-    # meta_info (Boris feedback: titles deserve a dedicated tab).
+    # meta_info (titles deserve a dedicated tab).
     title_node = tree.css_first("head > title")
     if title_node is not None:
         title_text = (title_node.text() or "").strip()

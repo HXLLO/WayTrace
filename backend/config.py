@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     # may probe up to. Values are requests per minute.
     archive_rate_per_minute: int = 75     # start: 1.25 req/s
     archive_rate_min: int = 60            # floor: 1 req/s
-    archive_rate_max: int = 80            # ceiling: ~1.33 req/s (below the ~105/min that got refused on 2600.eu)
+    archive_rate_max: int = 80            # ceiling: ~1.33 req/s (below the ~105/min refusal point measured during tuning)
     archive_rate_step: int = 15           # additive increase: +0.25 req/s per bump
     archive_rate_increase_interval: float = 90.0   # seconds clean before a bump
     archive_rate_decrease_factor: float = 0.5      # multiplicative decrease on a refusal
@@ -66,8 +66,7 @@ class Settings(BaseSettings):
     # rate limiter above is the real ceiling regardless of this, which is why
     # the WAITING queue can be deep (waiting jobs send archive.org nothing):
     # launch-day traffic queues up instead of getting "service full" errors.
-    # The per-IP cap is only an abuse net; per-account fairness comes from
-    # max_active_per_user (server build) and the fair scheduler.
+    # The per-IP cap is only an abuse net (kept high so CGNAT users are safe).
     max_active_total: int = 1
     max_queue_total: int = 100
     max_active_per_ip: int = 2
@@ -84,11 +83,11 @@ class Settings(BaseSettings):
     # long. 14 days = a domain isn't re-scanned within two weeks.
     scan_retention_days: int = 14
     cleanup_interval_seconds: int = 3600
-    # Permanent demo scan. A completed scan of this domain is persisted with a
-    # far-future expiry (never purged by retention) and /api/example-scan
-    # returns its url_id, so the homepage "See an example" button always opens
-    # a real report. Empty string disables the feature.
-    example_scan_domain: str = "xss.is"
+    # Optional demo scan. When set (EXAMPLE_SCAN_DOMAIN), a completed scan of
+    # this domain is persisted with a far-future expiry (never purged by
+    # retention) and /api/example-scan returns its url_id. Empty (the default)
+    # disables the feature.
+    example_scan_domain: str = ""
 
     # Self-host instance personalization (first-run wizard + Settings panel).
     # All four are empty by default so a fresh instance behaves exactly as
@@ -111,25 +110,17 @@ class Settings(BaseSettings):
     # Set EXPOSE_API_DOCS=1 in dev/local for interactive exploration.
     expose_api_docs: bool = False
 
-    # Only trust CF-Connecting-IP / X-Forwarded-For for the client IP when a
-    # known proxy (Cloudflare) actually sits in front. Off by default: our
-    # deployment terminates TLS at Caddy, which overwrites X-Real-IP with the
-    # real remote host, so a direct client cannot forge its IP to dodge the
-    # per-IP caps. Set TRUST_CLOUDFLARE=1 only if Cloudflare fronts the app.
+    # Only trust CF-Connecting-IP / X-Forwarded-For for the client IP when
+    # Cloudflare actually sits in front. Off by default: a reverse proxy that
+    # overwrites X-Real-IP with the real remote host already prevents a direct
+    # client from forging its IP to dodge the per-IP caps. Set
+    # TRUST_CLOUDFLARE=1 only if Cloudflare fronts the app.
     trust_cloudflare: bool = False
 
-    # Set IS_PRODUCTION=1 in deploy/.env.prod. Enables production boot checks
-    # (e.g. refusing to start with the default SECRET_KEY).
-    is_production: bool = False
     # Reject request bodies larger than this (bytes) before reading them, so an
     # unauthenticated POST can't OOM the single worker. The largest legitimate
     # body is selected_snapshots (max 5000 small objects); 2 MB is ample.
     max_request_body_bytes: int = 2_000_000
-    # Cloudflare Turnstile (managed mode) — bot gate on account creation. Inert
-    # when unset: no widget renders and verification is skipped (dev/self-host).
-    # Set both in deploy/.env.prod to enable on the hosted build.
-    turnstile_sitekey: str = ""
-    turnstile_secret: str = ""
     archive_request_timeout: int = 60
     archive_retry_count: int = 3
     scan_timeout_seconds: int = 3600
@@ -152,10 +143,6 @@ class Settings(BaseSettings):
     # runs, where /data is not creatable, so it lands at the repo root.
     database_url: str = str(_REPO_ROOT / "waytrace.db")
 
-    # Auth / accounts (v3). secret_key signs session + magic-link JWTs; override
-    # in prod via SECRET_KEY. Email is sent via Resend when resend_api_key is
-    # set, otherwise links are logged (dev fallback). public_base_url is used to
-    # build absolute links in emails.
 
     @field_validator("max_concurrent_scrapes")
     @classmethod

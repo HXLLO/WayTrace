@@ -183,7 +183,7 @@ def test_grouped_fingerprint_still_detected_despite_hash_word_far_away():
 
 
 # ---------------------------------------------------------------------------
-# Negative - contiguous 40-hex without PGP context (Boris FP report)
+# Negative - contiguous 40-hex without PGP context (field FP report)
 # ---------------------------------------------------------------------------
 
 

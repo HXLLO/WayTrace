@@ -58,7 +58,7 @@ async def _scans_last_7_days() -> int:
 @router.get("/service-status")
 async def service_status():
     """One-call status for the frontend banner: archive.org health plus
-    WayTrace's own load and the admin maintenance flag. Never 500s; each
+    WayTrace's own load and the operator maintenance flag. Never 500s; each
     sub-payload degrades independently."""
     try:
         archive = {**archive_health.status(),

@@ -1,9 +1,8 @@
-"""Public read-only namespace under /api/s/{url_id} + /api/feed.
+"""Read-only scan namespace under /api/s/{url_id}.
 
-These endpoints are exposed without authentication. The url_id is a
-24-char random token (~144 bits) generated server-side at submission
-time; knowing the url_id is the only "credential" needed to view or
-publish a scan.
+The url_id is a 24-char random token (~144 bits) generated server-side
+at submission time; knowing the url_id is the only capability needed to
+view a scan.
 """
 from __future__ import annotations
 
@@ -107,7 +106,7 @@ def _owner_ok(job: dict | None, user: dict | None) -> bool:
 @router.delete("/s/{url_id}")
 async def delete_scan(url_id: str, request: Request):
     """Permanently delete a scan: cancel it if still running, hard-delete the
-    persisted row so it disappears from My scans and the public feed."""
+    persisted row so it disappears from the scan history."""
     user = None
     live = await store.get_job_by_url_id(url_id)
     persisted = await get_job_by_url_id(url_id)
@@ -154,11 +153,9 @@ async def get_example_scan():
 
 @router.get("/local-scans")
 async def local_scans(limit: int = 50):
-    """SOLO / self-hosted 'My scans': every scan this instance has run (published
-    or not). Disabled on the hosted build - which scopes scans per account - so
-    it can never expose other users' private scans."""
-    if hasattr(settings, "require_account_to_scan"):
-        return {"scans": []}
+    """SOLO / self-hosted 'My scans': every scan this instance has run.
+    Disabled on the hosted build, which scopes scans per account, so it can
+    never expose other users' private scans."""
     return {"scans": await list_recent_scans(limit=limit)}
 
 

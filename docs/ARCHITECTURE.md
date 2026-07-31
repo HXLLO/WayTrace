@@ -6,41 +6,31 @@
 Client (Browser / curl)
     │
     ▼
-┌─────────────────────────────────────┐
-│  FastAPI (main.py)                  │
-│  CORS + Swagger UI on /docs         │
-├─────────────────────────────────────┤
-│  Routers                            │
-│  ├── scan.py                        │
-│  │   POST /api/scan/preflight       │
-│  │   POST /api/scan                 │
-│  │   GET  /api/jobs/{id}            │
-│  └── health.py                      │
-│      GET  /api/health               │
-│      GET  /api/stats                │
-├─────────────────────────────────────┤
-│  Job Store (store.py)               │
-│  In-memory, asyncio.Lock            │
-│  TTL cleanup every 10 min           │
-├─────────────────────────────────────┤
-│  Scan Pipeline (run_scan)           │
-│  ┌───────────────────────────┐      │
-│  │ 1. CDX API (cdx.py)       │      │
-│  │    HTML-only, paginated    │      │
-│  │    ↓                       │      │
-│  │ 2. Smart Filter            │      │
-│  │    (filters.py)            │      │
-│  │    Priority scoring + cap  │      │
-│  │    ↓                       │      │
-│  │ 3. Concurrent Scrape       │      │
-│  │    (scraper.py)            │      │
-│  │    Semaphore + delays      │      │
-│  │    ↓                       │      │
-│  │ 4. OSINT Extract           │      │
-│  │    (extractor.py)          │      │
-│  │    18 extraction categories│      │
-│  └───────────────────────────┘      │
-└─────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│  FastAPI (main.py)                           │
+│  Serves the single-file frontend + the API   │
+│  CORS, CSP, body-size cap, cache headers     │
+├──────────────────────────────────────────────┤
+│  Routers                                     │
+│  ├── scan.py       preflight, scan, jobs     │
+│  ├── health.py     health, stats, status     │
+│  ├── public.py     /s/{url_id}, search,      │
+│  │                 exports, local scans      │
+│  └── selfhost_config.py   /api/config        │
+├──────────────────────────────────────────────┤
+│  State                                       │
+│  ├── store.py   in-memory job index + queue  │
+│  └── db.py      SQLite (jobs, findings,      │
+│                 page FTS, app_state KV)      │
+├──────────────────────────────────────────────┤
+│  Scan Pipeline (run_scan)                    │
+│  ┌────────────────────────────────┐          │
+│  │ 1. CDX index      (cdx.py)     │          │
+│  │ 2. Smart filter   (filters.py) │          │
+│  │ 3. Scrape         (scraper.py) │          │
+│  │ 4. Extract        (extractor/) │          │
+│  └────────────────────────────────┘          │
+└──────────────────────────────────────────────┘
     │
     ▼
 archive.org (CDX API + Wayback Machine)
@@ -48,45 +38,65 @@ archive.org (CDX API + Wayback Machine)
 
 ## Scan Pipeline
 
-1. **CDX Query**: Fetch all archived HTML URLs from archive.org CDX API (server-side filtered to `mimetype:text/html`, paginated via resumeKey for large domains)
-2. **Smart Filter**: Score each path by OSINT value, apply depth preset and date range, select diverse snapshots within cap budget
-3. **Concurrent Scrape**: Download HTML from Wayback Machine with semaphore-controlled concurrency + random delays
-4. **OSINT Extract**: Parse each page for 18 categories of intelligence data using regex + DOM parsing via selectolax
+1. **CDX query** (`services/cdx.py`): fetch the archived HTML URLs for the
+   domain from the archive.org CDX API (server-side `mimetype:text/html`
+   filter, paginated via resumeKey for large domains, cached on disk).
+2. **Smart filter** (`services/filters.py`): score each path by OSINT value,
+   apply the depth preset and date range, and select a diverse,
+   year-proportional set of snapshots within the cap budget.
+3. **Concurrent scrape** (`services/scraper.py`): download the selected pages
+   from the Wayback Machine under a process-wide concurrency cap, with jitter
+   between requests. Extraction overlaps with the download, so findings start
+   appearing while pages are still coming in.
+4. **OSINT extraction** (`services/extractor/`): a package with one module per
+   category, 43 categories total, orchestrated by `extract.py` and
+   `finalize.py`. Parsing uses regex + selectolax DOM. Every extracted entity
+   carries `first_seen`, `last_seen` and `occurrences`; `highlights.py` ranks
+   the notable findings.
 
-## Preflight Flow
+## archive.org Politeness
 
-Before a full scan, clients can call `/api/scan/preflight` which runs only step 1 (CDX query) and returns domain statistics + a suggested scan config. This allows users to see how large a domain is and adjust depth/date range/cap before committing to the full pipeline.
+The request rate is driven by an adaptive AIMD governor
+(`services/archive_rate.py`): it starts low, creeps up while responses stay
+clean and halves the moment archive.org refuses a connection, with an
+escalating cooldown on repeated refusals (`services/archive_health.py` acts as
+a circuit breaker). Every instance sends a stable, identifiable User-Agent
+(`services/identity.py`) with a link to this project and an optional operator
+contact.
 
-## Smart Filtering Strategy
+## State and Persistence
 
-Snapshots are selected based on path priority scoring:
+- `store.py` keeps an in-memory index of live jobs for cheap progress polling,
+  plus the scan queue (one scan runs at a time by default; the rest wait).
+- `db.py` persists everything in SQLite: finished scans and their findings,
+  full-text search over the scraped pages, and an `app_state` key/value table
+  (instance settings, runtime config overrides).
+- The queue is restart-proof: queued and running jobs persist their submission
+  and are re-enqueued on startup under the same `job_id` / `url_id`.
+- A finished scan is addressed by its `url_id`, a 24-char random token
+  generated server-side.
+- Scans expire after `SCAN_RETENTION_DAYS` (14 by default, 0 keeps them
+  forever). Within that window, re-submitting the same domain returns the
+  existing scan unless `force` is set.
 
-| Score | Path type | Sampling |
-|-------|-----------|----------|
-| 3 (high) | OSINT paths: contact, about, team, careers, login, admin, blog... | First + last + 1/semester |
-| 2 (medium) | Homepage `/` | 1 per month |
-| 1 (low) | Everything else | First + last (+ 1/year if 3+ snapshots) |
+## Frontend
 
-Cap is computed adaptively based on unique paths and available HTML count:
-- Small sites (≤30 paths): scan almost everything, up to 500
-- Medium (31-200 paths): ~5 snapshots/path, up to 600
-- Large (201-1000 paths): ~2 snapshots/path, up to 800
-- Very large (1000+): hard cap at 800
-
-Depth presets multiply the cap: quick (×0.3), standard (×1.0), full (×1.5).
-
-## Data Flow
-
-- All state is in-memory (no database)
-- Jobs expire after 2 hours (configurable via `JOB_TTL_SECONDS`)
-- Jobs running > 25 minutes are auto-failed
-- Duplicate scans for the same domain return the existing job ID
+A single-page vanilla JS app (`frontend/index.html`, `app.js`, `styles.css`)
+served by the backend itself: no build step, no framework. Progress is polled
+every 2 seconds; the report offers filtering, full-text search and JSON / CSV /
+standalone-HTML export. The UI is bilingual (English / French) and themeable.
 
 ## Key Design Decisions
 
-- **No database**: Keeps deployment to a single container. Trade-off: data lost on restart
-- **Async everything**: FastAPI + aiohttp for non-blocking I/O throughout
-- **HTML-only CDX filter**: Server-side `mimetype:text/html` filter avoids downloading tens of thousands of asset entries
-- **Rate limiting archive.org**: Semaphore + random delays between requests to avoid 429s
-- **selectolax**: C-based HTML parser, significantly faster than BeautifulSoup
-- **Preflight step**: Cheap CDX-only call lets users make informed decisions before expensive scraping
+- **SQLite over a database server**: one container, one volume, no extra
+  dependency. WAL journal, accessed via `aiosqlite`.
+- **Async everything**: FastAPI + aiohttp, no blocking calls in the event loop.
+- **HTML-only CDX filter**: the server-side `mimetype:text/html` filter avoids
+  paging through tens of thousands of asset entries.
+- **Adaptive rate control**: an AIMD governor instead of fixed delays, so the
+  scan is as fast as archive.org tolerates that day, and no faster.
+- **selectolax**: C-based HTML parser, significantly faster than
+  BeautifulSoup.
+- **Preflight step**: a cheap CDX-only call (`/api/scan/preflight`) lets the
+  user see how large a domain is and tune depth / dates / cap before the real
+  scan.

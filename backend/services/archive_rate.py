@@ -145,7 +145,7 @@ def report_refusal() -> None:
 
 
 def current_rate_per_minute() -> float:
-    """Live rate, for logging / the admin monitor."""
+    """Live rate, for logging and the status endpoints."""
     return round(_controller.rate_per_sec() * 60.0, 1)
 
 

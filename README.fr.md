@@ -226,7 +226,7 @@ Les réglages vivent dans `.env` (copiez `.env.example`), et les variables incon
 
 ## API
 
-L'API HTTP est celle qu'utilise le frontend. La documentation interactive est servie sur `/api/docs` quand `EXPOSE_API_DOCS=1`.
+L'API HTTP est celle qu'utilise le frontend. La documentation interactive est servie sur `/api/docs` quand `EXPOSE_API_DOCS=1`. Référence complète des endpoints : [docs/API.md](docs/API.md) (en anglais).
 
 **Scan**
 
@@ -296,6 +296,8 @@ tests/                ~1250 tests sur ~80 fichiers : extraction, sélection,
 ```
 
 **Stack :** Python 3.12+, FastAPI, aiohttp, selectolax, Pydantic v2, aiosqlite, loguru.
+
+Une présentation plus détaillée du pipeline et des choix de conception se trouve dans [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (en anglais).
 
 Choix de conception à connaître :
 

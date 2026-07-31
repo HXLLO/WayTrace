@@ -72,9 +72,8 @@ app = FastAPI(
     description="OSINT tool using the Wayback Machine to reconstruct domain history",
     version=APP_VERSION,
     lifespan=lifespan,
-    # No public API discoverability in prod. The OpenAPI schema lists the
-    # legacy /api/collect / /api/analyze admin-facing endpoints that we don't
-    # want random visitors poking at. Set EXPOSE_API_DOCS=1 in dev to enable.
+    # No public API discoverability in prod: don't hand random visitors an
+    # interactive map of the API surface. Set EXPOSE_API_DOCS=1 in dev to enable.
     docs_url="/api/docs" if settings.expose_api_docs else None,
     redoc_url="/api/redoc" if settings.expose_api_docs else None,
     openapi_url="/api/openapi.json" if settings.expose_api_docs else None,
@@ -83,8 +82,8 @@ app = FastAPI(
 class _BodySizeLimitMiddleware:
     """Reject oversized request bodies (via Content-Length) before the app reads
     them, so an unauthenticated POST can't buffer hundreds of MB and OOM the
-    single worker. Caddy also caps the body in prod; this covers the app
-    directly (self-hosted / no proxy)."""
+    single worker. A reverse proxy in front may cap the body too; this covers
+    the app directly (self-hosted / no proxy)."""
 
     def __init__(self, app, max_bytes: int):
         self.app = app
@@ -134,14 +133,13 @@ async def static_asset_cache(request, call_next):
     return response
 
 
-# Content-Security-Policy (Caddy already sets HSTS / nosniff / frame-options).
+# Content-Security-Policy (HSTS / nosniff / frame-options come from the
+# reverse proxy in production).
 # 'unsafe-inline' is required: the single-file frontend uses inline <script>,
 # inline styles and inline event handlers. Even with it, the CSP blocks
 # external script origins, restricts XHR to same-origin, and kills framing.
 # Favicon thumbnails load from web.archive.org + Google's favicon service.
-# Cloudflare Turnstile (bot gate) needs its script + iframe when enabled. Only
-# widen the CSP when a sitekey is configured (never on the public/self-host build).
-_TS = "https://challenges.cloudflare.com" if settings.turnstile_sitekey else ""
+_TS = ""
 _CSP = (
     "default-src 'self'; "
     f"script-src 'self' 'unsafe-inline' {_TS}; "

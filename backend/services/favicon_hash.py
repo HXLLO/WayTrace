@@ -1,7 +1,7 @@
 """Best-effort favicon hashing.
 
-Boris feedback: surface an MD5/SHA-256 per favicon so identical brand icons can
-be pivoted across sites (same operator). The favicon bytes are NOT part of the
+Surfaces an MD5/SHA-256 per favicon so identical brand icons can be pivoted
+across sites (same operator). The favicon bytes are NOT part of the
 scraped pages, so the server fetches each archived favicon once from
 archive.org. This adds a tiny amount of load (a handful of small files per
 scan), so it is hard-gated:

@@ -1,4 +1,4 @@
-"""Admin-controlled maintenance flag.
+"""Operator-controlled maintenance flag.
 
 When enabled, /api/service-status reports state "maintenance" and the frontend
 shows a maintenance banner ahead of every other status. Persisted in the

@@ -15,10 +15,9 @@ from services.scraper import _get_global_sem  # shared archive.org concurrency c
 
 CDX_URL = "https://web.archive.org/cdx/search/cdx"
 
-# Default wall-clock deadline for the simple /api/scan flow's CDX phase.
-# The two-phase /api/collect path uses depth-aware budgets via
-# services.collector.cdx_budget_for_depth. this constant is the floor
-# for the legacy single-shot endpoint.
+# Default wall-clock deadline for the /api/scan flow's CDX phase: bounds how
+# long the paginated CDX index fetch may run before the scan proceeds with
+# whatever pages were indexed so far.
 _LEGACY_CDX_DEADLINE_SECONDS = 240
 
 _CACHE_DIR = Path(__file__).resolve().parent.parent / "data" / "cdx"

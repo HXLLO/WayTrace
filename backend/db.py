@@ -64,7 +64,7 @@ MIGRATIONS: list[tuple[int, str]] = [
         ALTER TABLE crawl_state ADD COLUMN truncated INTEGER DEFAULT 0;
         ALTER TABLE crawl_state ADD COLUMN truncation_reason TEXT;
     """),
-    # v3 accounts: scans owned by a user (nullable for legacy/anonymous rows).
+    # v3: optional scan ownership (user_id stays NULL for anonymous scans).
     (3, """
         ALTER TABLE jobs ADD COLUMN user_id INTEGER;
         CREATE INDEX IF NOT EXISTS idx_jobs_user ON jobs(user_id);
@@ -560,9 +560,9 @@ async def find_recent_scan_for_domain(domain: str, user_id=None) -> dict | None:
     """The most recent COMPLETED, non-expired scan for this domain, or None.
 
     Guardrail against re-scanning a domain we already have (which re-hammers
-    archive.org). Reuse works ACROSS accounts: a scan of the same domain
-    yields the same public-archive data whoever ran it, and the UI explains
-    the retention window. Pass user_id to restrict to one account's scans
+    archive.org). Reuse is instance-wide: a scan of the same domain yields
+    the same public-archive data whoever ran it, and the UI explains the
+    retention window. Pass user_id to restrict the match to one owner
     (no current caller does; kept for flexibility)."""
     if not domain:
         return None

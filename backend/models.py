@@ -158,9 +158,6 @@ class JobCreate(BaseModel):
     # Upper bound on selected_snapshots keeps a malicious client from
     # forcing a 5-million-item in-memory allocation in the pipeline.
     selected_snapshots: list[SnapshotRef] | None = Field(default=None, max_length=5000)
-    # Opt-in: email the signed-in user a link when the scan finishes. Honoured
-    # only on the hosted service (needs an account email + Resend).
-    notify_on_complete: bool = False
     # Guardrail bypass: by default, if a recent completed scan already exists for
     # this domain, the server returns it instead of re-scanning (avoids hammering
     # archive.org for a domain we already have). "Scan more" sets force=True to

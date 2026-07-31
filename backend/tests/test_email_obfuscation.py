@@ -106,7 +106,7 @@ def test_obfuscated_and_plain_email_dedup_to_one():
     assert values.count(email) == 1
 
 
-# --- JS module specs must NOT register as emails (Boris FP report) -------
+# --- JS module specs must NOT register as emails (field FP report) -------
 
 def _emails(html: str) -> list[str]:
     pages = [{"html": html, "url": "https://testcorp.io/", "timestamp": "20220601120000"}]

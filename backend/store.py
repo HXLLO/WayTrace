@@ -40,8 +40,6 @@ class QueueFullError(Exception):
     """Raised when the global active+waiting queue is at its hard cap."""
 
 
-class PerUserLimitError(Exception):
-    """Raised when an account already has its max scans in flight."""
 
 
 class JobStore:

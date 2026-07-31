@@ -1,8 +1,8 @@
 """Extract the client IP from a Starlette/FastAPI request, spoof-resistant.
 
-X-Real-IP is set by our own reverse proxy (Caddy -> {remote_host}) and
-overwrites any client-supplied value, so it cannot be forged. It is therefore
-the trust anchor. CF-Connecting-IP and X-Forwarded-For are only meaningful when
+X-Real-IP is set by the reverse proxy in front (which overwrites any
+client-supplied value with the real remote host), so it cannot be forged. It
+is therefore the trust anchor. CF-Connecting-IP and X-Forwarded-For are only meaningful when
 a known proxy (Cloudflare) sits in front; they are client-forgeable otherwise,
 so they are gated behind settings.trust_cloudflare to keep a direct client from
 faking its IP to bypass the per-IP scan caps.

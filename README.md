@@ -226,7 +226,7 @@ Settings live in `.env` (copy `.env.example`), and unknown variables are ignored
 
 ## API
 
-The HTTP API is the same one the frontend uses. Interactive docs are served at `/api/docs` when `EXPOSE_API_DOCS=1`.
+The HTTP API is the same one the frontend uses. Interactive docs are served at `/api/docs` when `EXPOSE_API_DOCS=1`. Full endpoint reference: [docs/API.md](docs/API.md).
 
 **Scanning**
 
@@ -296,6 +296,8 @@ tests/                ~1250 tests across ~80 files: extraction, selection,
 ```
 
 **Stack:** Python 3.12+, FastAPI, aiohttp, selectolax, Pydantic v2, aiosqlite, loguru.
+
+A longer walkthrough of the pipeline and the design decisions lives in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Design choices worth knowing:
 
