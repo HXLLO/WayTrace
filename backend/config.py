@@ -14,7 +14,7 @@ ENV_FILES = (_REPO_ROOT / ".env", Path(".env"))
 
 # Single source of truth for the tool version, surfaced in the API (/api/health,
 # OpenAPI) and injected into the frontend footer.
-APP_VERSION = "1.7.8"
+APP_VERSION = "1.7.9"
 
 # Shared User-Agent for every archive.org request (CDX collector, page scraper,
 # favicon fetcher). One polite identity so the Internet Archive can attribute
@@ -23,7 +23,10 @@ USER_AGENT = f"WayTrace/{APP_VERSION} (OSINT research tool; +https://github.com/
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env")
+    # extra="ignore": unknown env vars (e.g. a setting removed in a later
+    # release that still lingers in someone's .env) are ignored instead of
+    # crashing the boot, so upgrades never break on a stale .env.
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     # Polite defaults for archive.org. archive.org throttles by DROPPING the TCP
     # connection well before it returns HTTP 429, so a low concurrency plus the
@@ -61,8 +64,6 @@ class Settings(BaseSettings):
     archive_hard_cooldown_base: int = 120     # 2 min: first hard-block pause
     archive_hard_cooldown_max: int = 1800     # 30 min: ceiling for repeated blocks
     archive_hard_streak_reset: int = 900      # 15 min quiet since last block = fresh incident
-    job_ttl_seconds: int = 7200
-    max_active_jobs: int = 10
 
     # v2 public-mode queue caps. Scans are I/O-bound on archive.org; keep few
     # running at once so the aggregate archive.org load stays low (politeness,
@@ -149,27 +150,11 @@ class Settings(BaseSettings):
     # set, otherwise links are logged (dev fallback). public_base_url is used to
     # build absolute links in emails.
 
-    # Rate limiter (for slow collection; be polite to archive.org)
-    rate_limit_initial_delay: float = 0.15
-    rate_limit_min_delay: float = 0.1
-    rate_limit_max_delay: float = 300.0
-    rate_limit_speedup_factor: float = 0.9
-    rate_limit_speedup_streak: int = 10
-    rate_limit_backoff_factor: float = 3.0
-    rate_limit_429_pause: float = 120.0
-
     @field_validator("max_concurrent_scrapes")
     @classmethod
     def _scrapes_bounds(cls, v: int) -> int:
         if v < 1 or v > 50:
             raise ValueError("max_concurrent_scrapes must be between 1 and 50")
-        return v
-
-    @field_validator("max_active_jobs")
-    @classmethod
-    def _jobs_bounds(cls, v: int) -> int:
-        if v < 1:
-            raise ValueError("max_active_jobs must be >= 1")
         return v
 
     @field_validator("archive_request_timeout")

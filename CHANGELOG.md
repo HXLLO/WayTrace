@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.7.9
+
+- **Upgrades don't break on an old `.env`.** WayTrace now ignores unknown settings in your `.env` instead of refusing to start, so a variable left over from a previous release never blocks a boot.
+- **Fewer dead knobs.** Removed nine settings that were defined but never did anything (an old delay-based rate limiter, superseded by the adaptive archive.org governor), so the configuration is only settings that actually matter.
+
 ## v1.7.8
 
 - **The Settings panel is fully bilingual and safer to use.** Every label, description, unit and control is translated in both languages. Nothing is applied until you click a **Save** button that appears next to a setting when you change it, so a value is never committed by accident.
