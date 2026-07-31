@@ -90,6 +90,8 @@ window.addEventListener('unhandledrejection', (e) => _reportClientError(e.reason
 // notice; a mere non-200 (429/502/503 blip under launch load) does NOT, so a
 // busy moment never masquerades as an outage.
 let _statusNetFailStreak = 0;
+let _lastSvc = null;          // last /api/service-status service object
+let _setupRedirected = false; // one-shot guard for the first-run wizard gate
 async function checkServiceStatus() {
   const el = $('archive-banner');
   if (!el) return;
@@ -114,6 +116,15 @@ async function checkServiceStatus() {
   try { d = await r.json(); } catch (_) { return; }
   const svc = (d && d.service) || {};
   const arc = (d && d.archive) || {};
+  _lastSvc = svc;
+  // First-run gate (self-host only): a fresh instance with the config panel on
+  // and setup not yet completed lands the operator in the wizard once. The
+  // guard makes this a one-shot so a later manual navigation never bounces.
+  if (svc.config_panel && svc.setup_completed === false && !_setupRedirected) {
+    _setupRedirected = true;
+    const h = location.hash || '#/';
+    if (h !== '#/setup' && h.indexOf('#/s/') !== 0) { location.hash = '#/setup'; return; }
+  }
   renderHomeStatus(svc, arc);
   if (svc.state === 'maintenance') {
     _showStatusBanner('maintenance', svc.maintenance_message ||
@@ -317,7 +328,15 @@ function currentThemePref() {
 function applyThemeVars() {
   const root = document.documentElement;
   THEME_MANAGED_VARS.forEach(v => root.style.removeProperty(v));
-  const vars = computeThemeVars(currentThemePref());
+  // Precedence: a saved localStorage choice wins; otherwise the instance
+  // default theme injected by the server (self-host) applies transiently so it
+  // survives light/dark toggles without ever becoming a persisted user choice.
+  let pref = currentThemePref();
+  if (!pref) {
+    const d = (typeof window.__WT_DEFAULTS__ === 'object' && window.__WT_DEFAULTS__) || null;
+    if (d && d.theme) pref = {preset: d.theme};
+  }
+  const vars = computeThemeVars(pref);
   if (!vars) return;
   const mode = root.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
   const set = vars[mode];
@@ -343,6 +362,49 @@ function setThemePref(pref, opts) {
   if (!(opts && opts.localOnly) && typeof _syncThemeToServer === 'function') _syncThemeToServer(pref);
 }
 
+
+/* --- Instance defaults (self-host) ---
+   The server injects window.__WT_DEFAULTS__ = {theme, name} before paint when
+   an instance name / default theme is set. The theme is handled by the boot
+   script (mode) + applyThemeVars() (full vars); here we apply the name and
+   expose small helpers reused by the setup wizard. */
+function setInstanceName(name) {
+  const brand = document.querySelector('.nav-brand');
+  const n = (name || '').trim();
+  if (!n) return;
+  if (brand) brand.textContent = n;
+  document.title = n;
+}
+
+// Apply a preset's full palette right now WITHOUT persisting it, so it stays a
+// preview / default and any later explicit user choice still wins.
+function _applyPresetTransient(pref) {
+  const root = document.documentElement;
+  const vars = computeThemeVars(pref);
+  THEME_MANAGED_VARS.forEach(v => root.style.removeProperty(v));
+  if (!vars) return;
+  const mode = root.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  const set = vars[mode];
+  for (const k in set) root.style.setProperty(k, set[k]);
+}
+
+// Read the running version from the footer string so the UA preview stays in
+// sync with the shipped version without a second hardcoded constant.
+function _instanceVersion() {
+  try {
+    const el = document.querySelector('.home-version');
+    const m = (el ? el.textContent : '').match(/v(\d+\.\d+\.\d+)/);
+    if (m) return m[1];
+  } catch (_) {}
+  return '';
+}
+
+// Apply the injected instance defaults on load. Theme vars are already handled
+// by applyThemeVars()'s __WT_DEFAULTS__ fallback; here we only set the name.
+function applyInstanceDefaults() {
+  const d = (typeof window.__WT_DEFAULTS__ === 'object' && window.__WT_DEFAULTS__) || null;
+  if (d && d.name) setInstanceName(d.name);
+}
 
 /* --- Themes page --- */
 function _themeSeedHexes(p) {
@@ -508,6 +570,52 @@ const I18N = {
     'config.sub': "Ces valeurs par défaut viennent de nombreux tests, mais tout l'intérêt est que vous pouvez tout régler : chaque paramètre de scan et d'archive.org de cette installation, enregistré localement et appliqué quand vous cliquez sur Enregistrer. La zone orange est agressive; la zone rouge comporte un risque réel qu'archive.org bloque votre IP. Votre machine, vos règles. Si vous trouvez un meilleur équilibre, partagez votre expérience.",
     'config.disabled': "Le panneau de réglages est désactivé sur cette instance.",
     'config.safe': 'Revenir aux valeurs sûres',
+    'config.runsetup': 'Relancer la configuration',
+    // First-run setup wizard
+    'setup.title': 'Configurez votre instance WayTrace',
+    'setup.lead': "Quelques choix facultatifs pour faire de cette instance la vôtre. Vous pourrez tout modifier plus tard dans les Réglages.",
+    'setup.skip': 'Passer pour l’instant',
+    'setup.name.title': 'Nom de l’instance',
+    'setup.name.desc': "Affiché dans la barre de navigation et l’onglet du navigateur. Laissez vide pour garder WayTrace tel quel.",
+    'setup.name.ph': 'WayTrace',
+    'setup.name.preview': 'Aperçu',
+    'setup.theme.title': 'Apparence',
+    'setup.theme.desc': "Choisissez le thème par défaut que verront les nouveaux visiteurs. Chaque thème a une face claire et une face sombre.",
+    'setup.theme.dark': 'Sombre',
+    'setup.theme.light': 'Clair',
+    'setup.identity.title': 'Identité archive.org',
+    'setup.identity.desc': "Chaque requête envoyée à archive.org porte un identifiant stable propre à cette instance. C’est une attribution honnête, pas un déguisement.",
+    'setup.identity.id': 'ID d’instance',
+    'setup.identity.contact': 'Contact de l’opérateur (facultatif)',
+    'setup.identity.contact.ph': 'vous@example.com',
+    'setup.identity.contact.hint': "Envoyé à archive.org pour qu'ils puissent vous contacter. Laissez vide pour utiliser l'URL du projet.",
+    'setup.identity.ua': 'User-Agent',
+    'setup.cats.title': 'Catégories par défaut',
+    'setup.cats.desc': "Les catégories de renseignement que WayTrace extrait par défaut. Toutes sont activées au départ ; vous pouvez aussi les restreindre pour un scan précis.",
+    'setup.back': 'Retour',
+    'setup.save': 'Enregistrer et démarrer',
+    // Category picker (shared)
+    'setup.cat.all': 'Tout sélectionner',
+    'setup.cat.none': 'Tout désélectionner',
+    'setup.grp.sensitive': 'Expositions sensibles',
+    'setup.grp.identity': 'Identité et pivots',
+    'setup.grp.tech': 'Technique et infrastructure',
+    'setup.grp.analytics': 'Analytics et traqueurs',
+    'setup.grp.content': 'Contenu et métadonnées',
+    'setup.grp.other': 'Autres',
+    '{n} of {m}': '{n} sur {m}',
+    'generated on first scan': 'généré au premier scan',
+    'Could not save your settings.': "Impossible d’enregistrer vos réglages.",
+    // Per-scan category control (advanced scan step)
+    'scope.cats.title': 'Catégories',
+    'all {m} categories': 'les {m} catégories',
+    '{n} of {m} categories': '{n} catégories sur {m}',
+    // Config panel: instance group title + tunable descriptions
+    'Instance & identity': 'Instance et identité',
+    'Display name for this instance, shown in the header and page title. Empty uses plain WayTrace.': "Nom affiché de cette instance, dans l’en-tête et le titre de la page. Vide = WayTrace simple.",
+    'Optional email or URL sent to archive.org in the User-Agent so they can reach you. Empty uses the project URL.': "E-mail ou URL facultatif envoyé à archive.org dans le User-Agent pour qu’ils puissent vous joindre. Vide = URL du projet.",
+    'Theme applied on first visit when the browser has no saved choice. Empty uses the default dark theme.': "Thème appliqué à la première visite quand le navigateur n’a pas de choix enregistré. Vide = thème sombre par défaut.",
+    'Extraction categories run by default. Empty runs all of them; a subset makes this instance a focused scanner.': "Catégories d’extraction exécutées par défaut. Vide = toutes ; un sous-ensemble fait de cette instance un scanner ciblé.",
     'Save': 'Enregistrer',
     'Set to unlimited': 'Définir sur illimité',
     'Some changed settings need a restart to take effect.': 'Certains réglages modifiés nécessitent un redémarrage pour prendre effet.',
@@ -574,7 +682,7 @@ const I18N = {
     'home.adv.hint': "Les sous-domaines et la densité des snapshots se choisissent à l'étape suivante, une fois archive.org interrogé pour ce domaine.",
     'home.hint': 'Appuyez sur <kbd>Entrée</kbd> pour choisir les sous-domaines, les dates et la densité avant de lancer.',
     'home.caption': 'Données publiques uniquement &middot; <a href="#/legal">Mentions légales</a>',
-    'home.version': 'WayTrace v1.8.1 &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">thèmes</a>',
+    'home.version': 'WayTrace v1.8.2 &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">thèmes</a>',
     'home.archivedby': 'Archives par',
     'Pages read from': 'Pages lues depuis',
     'Querying archive.org': 'Interrogation archive.org',
@@ -973,6 +1081,19 @@ function setLang(l) {
       onScopeDensity();        // density label/hint + estimate
     }
   } catch (_) {}
+  // Category pickers carry JS-built labels + count summaries: refresh them so
+  // a language switch relabels the categories and the "N of M" counts.
+  try {
+    const setupView = document.getElementById('view-setup');
+    if (setupView && setupView.classList.contains('active') && _setupState.choices) {
+      renderCatPicker($('setup-cats'), _setupState.catsSet, _setupState.choices, function () {});
+      setupOnContact();
+    }
+    if (_scopeCatState && $('scope-cats')) {
+      renderCatPicker($('scope-cats'), _scopeCatState.set, _scopeCatState.choices, _updateScopeCatSummary);
+      _updateScopeCatSummary();
+    }
+  } catch (_) {}
 }
 function toggleLang() { setLang(LANG === 'fr' ? 'en' : 'fr'); }
 function initLang() {
@@ -1017,6 +1138,10 @@ function _cfgInput(s) {
   if (s.type === 'str') {
     return `<input type="text" id="${id}" class="config-text" value="${escAttr(String(s.value))}">`;
   }
+  if (s.type === 'multichoice') {
+    // Populated by renderConfigPage() via renderCatPicker once in the DOM.
+    return `<div id="${id}" class="catpick config-multichoice"></div>`;
+  }
   const step = s.step != null ? s.step : (s.type === 'float' ? 0.1 : 1);
   return `<input type="number" id="${id}" class="config-num" value="${s.value}"` +
     ` min="${s.min}" max="${s.max}" step="${step}">`;
@@ -1055,7 +1180,31 @@ function _cfgReadInput(spec, el) {
   if (spec.type === 'bool') return el.checked;
   if (spec.type === 'int') return parseInt(el.value, 10);
   if (spec.type === 'float') return parseFloat(el.value);
+  if (spec.type === 'multichoice') return _cfgReadMulti(spec, el);
   return el.value;
+}
+
+// The multichoice control (categories) stores its Set on the container. Empty
+// == all == canonical [] so the saved value keeps "all, future-proof" meaning.
+function _cfgReadMulti(spec, container) {
+  const sel = (container && container._catSelected) || new Set();
+  const choices = (container && container._catChoices) || spec.choices || [];
+  const list = choices.filter(c => sel.has(c));
+  return list.length === choices.length ? [] : list;
+}
+
+// Normalise a stored multichoice value to compare against a live read: an empty
+// list and a full list are both "all". Returns choices-ordered array.
+function _normCats(v, choices) {
+  const arr = Array.isArray(v) ? v : [];
+  if (!arr.length || arr.length === choices.length) return [];
+  return choices.filter(c => arr.includes(c));
+}
+
+// The row's editable control, by type (multichoice uses a container, not <input>).
+function _cfgControlEl(row, spec) {
+  if (spec && spec.type === 'multichoice') return row.querySelector('.config-multichoice');
+  return row.querySelector('input, select');
 }
 
 // A row is dirty when its input differs from the server value. Toggles the
@@ -1063,11 +1212,16 @@ function _cfgReadInput(spec, el) {
 function _cfgRefreshRow(row) {
   const key = row.dataset.key;
   const spec = _cfgFlat[key];
-  const el = row.querySelector('input, select');
+  const el = _cfgControlEl(row, spec);
   const save = row.querySelector('.config-save');
   const val = _cfgReadInput(spec, el);
-  const numBad = (spec.type === 'int' || spec.type === 'float') && !isFinite(val);
-  const dirty = !numBad && val !== spec.value;
+  let dirty;
+  if (spec.type === 'multichoice') {
+    dirty = JSON.stringify(val) !== JSON.stringify(_normCats(spec.value, spec.choices || []));
+  } else {
+    const numBad = (spec.type === 'int' || spec.type === 'float') && !isFinite(val);
+    dirty = !numBad && val !== spec.value;
+  }
   if (save) save.hidden = !dirty;
   row.classList.toggle('dirty', dirty);
   const dot = row.querySelector('.hs-dot');
@@ -1098,6 +1252,15 @@ async function renderConfigPage() {
       <div class="config-rows">${g.settings.map(_cfgRow).join('')}</div>
     </section>`).join('');
   groupsEl.querySelectorAll('.config-row').forEach(row => {
+    const spec = _cfgFlat[row.dataset.key];
+    if (spec && spec.type === 'multichoice') {
+      // Grouped checklist; empty stored value means "all", so seed accordingly.
+      const cont = _cfgControlEl(row, spec);
+      const choices = spec.choices || [];
+      const seed = (Array.isArray(spec.value) && spec.value.length) ? spec.value : choices;
+      renderCatPicker(cont, new Set(seed), choices, () => _cfgRefreshRow(row));
+      return;
+    }
     const el = row.querySelector('input, select');
     if (el) el.addEventListener('input', () => _cfgRefreshRow(row));
     if (el) el.addEventListener('change', () => _cfgRefreshRow(row));
@@ -1105,7 +1268,7 @@ async function renderConfigPage() {
   groupsEl.querySelectorAll('.config-save').forEach(btn => btn.addEventListener('click', () => {
     const key = btn.dataset.key;
     const row = btn.closest('.config-row');
-    const val = _cfgReadInput(_cfgFlat[key], row.querySelector('input, select'));
+    const val = _cfgReadInput(_cfgFlat[key], _cfgControlEl(row, _cfgFlat[key]));
     _cfgSave({ [key]: val });
   }));
   groupsEl.querySelectorAll('.config-inf').forEach(btn => btn.addEventListener('click', () => {
@@ -1182,17 +1345,174 @@ async function configSafeValues() {
   if (Object.keys(safe).length) await _cfgSave(safe);
 }
 
+/* ===== FIRST-RUN SETUP WIZARD (self-host) ===== */
+let _setupState = {choices: null, catsSet: null, instanceId: '', theme: ''};
+
+async function renderSetupWizard() {
+  let cfg = null;
+  try {
+    const r = await fetch(API + '/api/config');
+    if (r.ok) cfg = await r.json();
+  } catch (_) {}
+  // Hosted (panel off) never routes here; if a user lands on #/setup anyway and
+  // the config endpoint is unavailable, fall back to sensible client defaults.
+  const flat = {};
+  if (cfg && cfg.groups) cfg.groups.forEach(g => g.settings.forEach(s => { flat[s.key] = s; }));
+
+  const choices = (flat.default_categories && flat.default_categories.choices) || REPORT2_SCOPE.slice();
+  const curCats = (flat.default_categories && flat.default_categories.value) || [];
+  const selected = new Set(curCats.length ? curCats : choices); // all on by default
+  _setupState.choices = choices;
+  _setupState.catsSet = selected;
+  _setupState.instanceId = (cfg && cfg.instance_id) || '';
+
+  const nameInput = $('setup-name');
+  if (nameInput) nameInput.value = (flat.instance_name && flat.instance_name.value) || '';
+  const contactInput = $('setup-contact');
+  if (contactInput) contactInput.value = (flat.operator_contact && flat.operator_contact.value) || '';
+
+  const curPref = currentThemePref();
+  _setupState.theme = (flat.default_theme && flat.default_theme.value)
+    || (curPref && curPref.preset) || '';
+
+  const idEl = $('setup-instance-id');
+  if (idEl) idEl.textContent = _setupState.instanceId || t('generated on first scan');
+
+  _setupRenderThemes();
+  _setupSyncModeButtons();
+  renderCatPicker($('setup-cats'), selected, choices, function () {});
+  setupOnName();
+  setupOnContact();
+  applyI18n();
+}
+
+function _setupRenderThemes() {
+  const grid = $('setup-themes');
+  if (!grid) return;
+  grid.innerHTML = THEME_PRESETS.map(p => {
+    const v = computeThemeVars({preset: p.id});
+    const d = v.dark, l = v.light;
+    return `<button type="button" class="theme-card" data-theme="${p.id}" onclick="setupPickTheme('${p.id}')">
+      <span class="theme-prev">
+        <span class="theme-prev-half" style="background:${d['--bg']}"><span class="theme-prev-bar" style="background:${d['--surface2']}"></span><span class="theme-prev-dot" style="background:${d['--accent']}"></span></span>
+        <span class="theme-prev-half" style="background:${l['--bg']}"><span class="theme-prev-bar" style="background:${l['--surface2']}"></span><span class="theme-prev-dot" style="background:${l['--accent']}"></span></span>
+      </span>
+      <span class="theme-card-name">${p.name}</span>
+    </button>`;
+  }).join('');
+  _setupMarkTheme();
+}
+
+function _setupMarkTheme() {
+  const grid = $('setup-themes');
+  if (!grid) return;
+  grid.querySelectorAll('.theme-card').forEach(c =>
+    c.classList.toggle('active', c.dataset.theme === _setupState.theme));
+}
+
+function setupPickTheme(id) {
+  _setupState.theme = id;
+  const mode = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  _applyPresetTransient({preset: id, mode});   // live preview, not persisted until Save
+  _setupMarkTheme();
+}
+
+function setupSetMode(mode) {
+  if (mode === 'light') document.documentElement.setAttribute('data-theme', 'light');
+  else document.documentElement.removeAttribute('data-theme');
+  try { localStorage.setItem('wt_theme', mode); } catch (_) {}
+  applyThemeLabel();
+  if (_setupState.theme) _applyPresetTransient({preset: _setupState.theme, mode});
+  else applyThemeVars();
+  _setupSyncModeButtons();
+}
+
+function _setupSyncModeButtons() {
+  const light = document.documentElement.getAttribute('data-theme') === 'light';
+  document.querySelectorAll('#view-setup .setup-mode-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === (light ? 'light' : 'dark')));
+}
+
+function setupOnName() {
+  const el = $('setup-name');
+  const v = (el && el.value || '').trim();
+  const prev = $('setup-brand-preview');
+  if (prev) prev.innerHTML = v ? esc(v) : 'Way<span>Trace</span>';
+}
+
+function _buildUAPreview(contact, id) {
+  const ver = _instanceVersion();
+  const idPart = id || 'xxxxxx';
+  const contactPart = contact ? '+' + contact : '+https://github.com/thomashousset/WayTrace';
+  return 'WayTrace/' + ver + ' (' + contactPart + '; id:' + idPart + ')';
+}
+
+function setupOnContact() {
+  const el = $('setup-contact');
+  const c = (el && el.value || '').trim();
+  const ua = $('setup-ua-preview');
+  if (ua) ua.textContent = _buildUAPreview(c, _setupState.instanceId);
+}
+
+async function _setupCompleteAndGoHome() {
+  try { await fetch(API + '/api/config/complete-setup', {method: 'POST'}); } catch (_) {}
+  _setupRedirected = true;
+  location.hash = '#/';
+}
+
+async function setupSave() {
+  const name = ($('setup-name') && $('setup-name').value || '').trim();
+  const contact = ($('setup-contact') && $('setup-contact').value || '').trim();
+  const choices = _setupState.choices || [];
+  const selected = _setupState.catsSet || new Set();
+  const cats = choices.filter(c => selected.has(c));
+  // All selected = canonical empty ("all categories", future-proof).
+  const catsPayload = (cats.length === choices.length) ? [] : cats;
+  const payload = {
+    instance_name: name,
+    operator_contact: contact,
+    default_theme: _setupState.theme || '',
+    default_categories: catsPayload,
+  };
+  try {
+    const r = await fetch(API + '/api/config', {
+      method: 'PUT', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      showToast((d && d.detail) || t('Could not save your settings.'));
+      return;
+    }
+  } catch (_) {
+    showToast(t('Could not save your settings.'));
+    return;
+  }
+  // Apply live for this browser: persist the picked theme locally (an explicit
+  // choice now) and set the name immediately.
+  if (_setupState.theme) {
+    const mode = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    setThemePref({preset: _setupState.theme, mode}, {localOnly: true});
+  }
+  if (name) setInstanceName(name);
+  await _setupCompleteAndGoHome();
+}
+
+async function setupSkip() {
+  await _setupCompleteAndGoHome();
+}
+
 /* ===== ROUTER ===== */
 function navigate(hash) {
   const parts = (hash || '#/').replace('#/', '').split('/').filter(Boolean);
   // v2 public scan route: #/s/{url_id}
   let view = parts[0] === 's' ? 'scan-public' : (parts[0] || 'home');
-  const valid = new Set(['home', 'scope', 'history', 'scan-public', 'legal', 'themes', 'config']);
+  const valid = new Set(['home', 'scope', 'history', 'scan-public', 'legal', 'themes', 'config', 'setup']);
   if (!valid.has(view)) view = 'notfound';
   // 'results' stays here (not in `valid`): the public flow reuses view-results,
   // so navigate() must still deactivate it when leaving, even though there is no
   // longer a /#/results route.
-  const views = ['home', 'scope', 'results', 'history', 'scan-public', 'legal', 'themes', 'config', 'admin', 'notfound'];
+  const views = ['home', 'scope', 'results', 'history', 'scan-public', 'legal', 'themes', 'config', 'setup', 'admin', 'notfound'];
 
   views.forEach(v => {
     const el = $('view-' + v);
@@ -1222,6 +1542,8 @@ function navigate(hash) {
     renderThemesPage();
   } else if (view === 'config') {
     renderConfigPage();
+  } else if (view === 'setup') {
+    renderSetupWizard();
   }
 }
 
@@ -1713,6 +2035,107 @@ function catLabel(key) {
   return t(CAT_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
 }
 
+/* ===== SHARED CATEGORY PICKER =====
+   A grouped, checkable list of the extraction categories, reused by the setup
+   wizard, the per-scan advanced step, and the config panel's multichoice row.
+   Groups are thematic; any category the backend reports that is not mapped here
+   falls into "Other" so the picker always covers the full choice set. */
+const CAT_GROUPS = [
+  {key: 'setup.grp.sensitive', en: 'Sensitive exposure',   cats: ['api_keys', 'cloud_buckets', 'connection_strings', 'jwt_tokens', 'internal_ips', 'hidden_fields', 'directory_listings', 'crypto_addresses', 'pgp_keys']},
+  {key: 'setup.grp.identity',  en: 'Identity & pivots',     cats: ['emails', 'subdomains', 'persons', 'phones', 'organizations', 'addresses', 'social_profiles', 'github_repos', 'french_business_ids', 'endpoints', 'auth_providers']},
+  {key: 'setup.grp.tech',      en: 'Tech & infrastructure', cats: ['technologies', 'hosting', 'http_headers', 'favicons', 'js_urls', 'assets', 'iframe_sources', 'captcha_providers', 'status_pages']},
+  {key: 'setup.grp.analytics', en: 'Analytics & tracking',  cats: ['analytics_trackers', 'analytics_ids', 'adsense_ids', 'cookie_consent', 'verification_tags']},
+  {key: 'setup.grp.content',   en: 'Content & metadata',    cats: ['meta_info', 'html_titles', 'html_comments', 'outgoing_links', 'linked_documents', 'rss_feeds', 'sitemaps_and_robots', 'bug_bounty_programs', 'job_boards']},
+];
+
+// Group the given choices, preserving CAT_GROUPS order and dropping any group
+// with no available category. Unmapped categories collapse into "Other".
+function _catGroupsFor(choices) {
+  const set = new Set(choices);
+  const used = new Set();
+  const groups = [];
+  CAT_GROUPS.forEach(g => {
+    const cats = g.cats.filter(c => set.has(c));
+    cats.forEach(c => used.add(c));
+    if (cats.length) groups.push({key: g.key, en: g.en, cats});
+  });
+  const other = choices.filter(c => !used.has(c));
+  if (other.length) groups.push({key: 'setup.grp.other', en: 'Other', cats: other});
+  return groups;
+}
+
+// Render the picker into `container`, driving the `selected` Set. `onChange` is
+// called after any change so callers can refresh their own summaries.
+function renderCatPicker(container, selected, choices, onChange) {
+  if (!container) return;
+  container._catSelected = selected;
+  container._catChoices = choices;
+  container._catOnChange = onChange || null;
+  const groups = _catGroupsFor(choices);
+  const head = `<div class="catpick-bar">
+      <span class="catpick-count" data-catcount></span>
+      <span class="catpick-tools">
+        <button type="button" class="scope-mini-btn" data-catall data-i18n="setup.cat.all">Select all</button>
+        <button type="button" class="scope-mini-btn" data-catnone data-i18n="setup.cat.none">Select none</button>
+      </span>
+    </div>`;
+  const body = groups.map(g => {
+    const rows = g.cats.map(c => `<label class="catpick-item">
+        <input type="checkbox" data-cat="${escAttr(c)}" ${selected.has(c) ? 'checked' : ''}>
+        <span>${esc(catLabel(c))}</span>
+      </label>`).join('');
+    return `<div class="catpick-group">
+        <div class="catpick-group-head">
+          <label class="catpick-grouptoggle"><input type="checkbox" data-catgroup="${escAttr(g.key)}"><span data-i18n="${escAttr(g.key)}">${esc(g.en)}</span></label>
+          <span class="catpick-group-count" data-groupcount="${escAttr(g.key)}"></span>
+        </div>
+        <div class="catpick-items">${rows}</div>
+      </div>`;
+  }).join('');
+  container.innerHTML = head + `<div class="catpick-groups">${body}</div>`;
+
+  container.querySelectorAll('input[data-cat]').forEach(cb => cb.addEventListener('change', () => {
+    if (cb.checked) selected.add(cb.dataset.cat); else selected.delete(cb.dataset.cat);
+    _catPickerRefresh(container);
+  }));
+  const allBtn = container.querySelector('[data-catall]');
+  if (allBtn) allBtn.addEventListener('click', () => { choices.forEach(c => selected.add(c)); _catPickerSync(container); });
+  const noneBtn = container.querySelector('[data-catnone]');
+  if (noneBtn) noneBtn.addEventListener('click', () => { selected.clear(); _catPickerSync(container); });
+  container.querySelectorAll('input[data-catgroup]').forEach(cb => cb.addEventListener('change', () => {
+    const g = _catGroupsFor(choices).find(x => x.key === cb.dataset.catgroup);
+    if (!g) return;
+    if (cb.checked) g.cats.forEach(c => selected.add(c)); else g.cats.forEach(c => selected.delete(c));
+    _catPickerSync(container);
+  }));
+  applyI18n();
+  _catPickerRefresh(container);
+}
+
+// Re-sync every checkbox from the Set (after select-all / none / group toggle).
+function _catPickerSync(container) {
+  const selected = container._catSelected;
+  container.querySelectorAll('input[data-cat]').forEach(cb => { cb.checked = selected.has(cb.dataset.cat); });
+  _catPickerRefresh(container);
+}
+
+// Refresh the count summary and every group toggle's checked/indeterminate
+// state, then notify the caller.
+function _catPickerRefresh(container) {
+  const selected = container._catSelected;
+  const choices = container._catChoices;
+  const countEl = container.querySelector('[data-catcount]');
+  if (countEl) countEl.textContent = t('{n} of {m}').replace('{n}', selected.size).replace('{m}', choices.length);
+  _catGroupsFor(choices).forEach(g => {
+    const on = g.cats.filter(c => selected.has(c)).length;
+    const gc = container.querySelector('[data-groupcount="' + g.key + '"]');
+    if (gc) gc.textContent = on + '/' + g.cats.length;
+    const gt = container.querySelector('input[data-catgroup="' + g.key + '"]');
+    if (gt) { gt.checked = on === g.cats.length; gt.indeterminate = on > 0 && on < g.cats.length; }
+  });
+  if (container._catOnChange) container._catOnChange();
+}
+
 
 
 // Categories where displaying many items adds little (technical noise that's
@@ -1910,6 +2333,7 @@ window.addEventListener('DOMContentLoaded', () => {
     history.replaceState(null, '', '/#' + cleaned + location.search);
   }
   initLang();
+  applyInstanceDefaults();
   navigate(location.hash || '#/');
   checkServiceStatus();
   setInterval(checkServiceStatus, 60000);
@@ -1999,6 +2423,76 @@ let scopeDayFrom = null;
 let scopeDayTo = null;
 let scopeDensityIdx = 5;   // default to Max density; user can dial it down
 
+/* ===== PER-SCAN CATEGORY PICKER (advanced scan step) =====
+   Seeded from the instance default (fetched from /api/config when the config
+   panel is on; otherwise all categories). The user can narrow it for a single
+   scan; when the selection matches the seed we omit `categories` from the
+   payload so the backend applies its instance default. */
+let _scopeCatState = null;
+
+async function _initScopeCats() {
+  const card = $('scope-card-cats');
+  if (!card) return;
+  let choices = REPORT2_SCOPE.slice();
+  let seed = null;   // instance default (empty/null => all)
+  if (_lastSvc && _lastSvc.config_panel) {
+    try {
+      const r = await fetch(API + '/api/config');
+      if (r.ok) {
+        const cfg = await r.json();
+        const flat = {};
+        (cfg.groups || []).forEach(g => g.settings.forEach(s => { flat[s.key] = s; }));
+        if (flat.default_categories) {
+          choices = flat.default_categories.choices || choices;
+          seed = flat.default_categories.value || [];
+        }
+      }
+    } catch (_) {}
+  }
+  const seedSet = new Set((seed && seed.length) ? seed : choices);
+  _scopeCatState = {choices, seedSet, set: new Set(seedSet)};
+  const body = $('scope-cats');
+  if (body) { body.hidden = true; }
+  const caret = $('scope-cats-caret');
+  if (caret) caret.textContent = '+';
+  const head = $('scope-cats-head');
+  if (head) head.setAttribute('aria-expanded', 'false');
+  renderCatPicker(body, _scopeCatState.set, choices, _updateScopeCatSummary);
+  _updateScopeCatSummary();
+}
+
+function _updateScopeCatSummary() {
+  const el = $('scope-cats-summary');
+  if (!el || !_scopeCatState) return;
+  const n = _scopeCatState.set.size, m = _scopeCatState.choices.length;
+  el.textContent = (n === m)
+    ? t('all {m} categories').replace('{m}', m)
+    : t('{n} of {m} categories').replace('{n}', n).replace('{m}', m);
+}
+
+function toggleScopeCats() {
+  const body = $('scope-cats');
+  const caret = $('scope-cats-caret');
+  const head = $('scope-cats-head');
+  if (!body) return;
+  const open = body.hidden;
+  body.hidden = !open;
+  if (caret) caret.textContent = open ? '-' : '+';
+  if (head) head.setAttribute('aria-expanded', String(open));
+}
+
+// The categories to send with a scan: null when the selection still matches the
+// instance-default seed (backend fills it in), otherwise the explicit list.
+function _scopeSelectedCategories() {
+  if (!_scopeCatState) return null;
+  const {choices, set, seedSet} = _scopeCatState;
+  const sel = choices.filter(c => set.has(c));
+  if (!sel.length) return null;   // guard: empty selection => use default, not "extract nothing"
+  const seed = choices.filter(c => seedSet.has(c));
+  const unchanged = sel.length === seed.length && sel.every((c, i) => c === seed[i]);
+  return unchanged ? null : sel;
+}
+
 async function loadScope(domain) {
   scopeDomain = domain;
   scopeSubdomains = [];
@@ -2071,6 +2565,7 @@ async function loadScope(domain) {
     if ($('scope-card-timeline')) $('scope-card-timeline').style.display = '';
     renderScopeChips();
     renderScopeTimeline();
+    _initScopeCats();
   } catch (e) {
     showFallbackScopeUI(domain, e.message);
   }
@@ -2135,6 +2630,7 @@ function showFallbackScopeUI(domain, detailMsg) {
     + fbTail;
   _applyScopePrefill();
   renderScopeChips();
+  _initScopeCats();
 }
 
 // Subdomains sorted as a hierarchy (sub-subdomains nested under their parent),
@@ -2656,6 +3152,12 @@ async function launchScopedScan() {
       if (scopeMonthTo) cfg.date_to = scopeMonthTo;
       if (Object.keys(cfg).length) body.config = cfg;
     }
+
+    // Per-scan category override (null when it still matches the instance
+    // default). Categories live on the ScanConfig, and JobCreate forbids extra
+    // top-level keys, so it MUST go under body.config, not at the top level.
+    const cats = _scopeSelectedCategories();
+    if (cats) { body.config = body.config || {}; body.config.categories = cats; }
 
     const resp = await fetch(API + '/api/scan', {
       method: 'POST',

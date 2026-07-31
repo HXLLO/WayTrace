@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from loguru import logger
 
 from config import settings, APP_VERSION
@@ -218,9 +219,36 @@ async def serve_app_js():
     return FileResponse(FRONTEND_DIR / "app.js", media_type="text/javascript", headers=_REVALIDATE)
 
 
+# index.html is read once at import; each request re-injects the instance
+# defaults so the boot script can apply the default theme/name BEFORE paint
+# (no FOUC). Kept as raw text so the injection is a single cheap str.replace.
+_INDEX_HTML = (FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
+_INDEX_PLACEHOLDER = "<!--WT_DEFAULTS-->"
+
+
+def _serve_index():
+    """Serve index.html. When there are no instance defaults to inject (hosted,
+    or a self-host install that set none) fall back to FileResponse so the
+    ETag/Last-Modified conditional-GET (304) path is preserved and the head is
+    byte-identical to the static file. Only a self-host instance WITH a default
+    theme or name pays the per-request injection + full-body transfer."""
+    if not (settings.config_panel_enabled and (settings.default_theme or settings.instance_name)):
+        return FileResponse(FRONTEND_DIR / "index.html", headers=_REVALIDATE)
+    payload = json.dumps({"theme": settings.default_theme, "name": settings.instance_name})
+    # json.dumps escapes quotes/backslashes but NOT "</script>" or the JS line
+    # separators U+2028/U+2029, so an instance_name containing those could break
+    # out of the inline <script>. Neutralise them (standard safe-JSON-in-HTML
+    # escaping) so a self-set name can never inject.
+    payload = (payload.replace("<", "\\u003c").replace(">", "\\u003e")
+                      .replace(chr(0x2028), "\\u2028").replace(chr(0x2029), "\\u2029"))
+    blob = f"<script>window.__WT_DEFAULTS__={payload}</script>"
+    html = _INDEX_HTML.replace(_INDEX_PLACEHOLDER, blob)
+    return HTMLResponse(html, headers=_REVALIDATE)
+
+
 @app.get("/")
 async def serve_frontend():
-    return FileResponse(FRONTEND_DIR / "index.html", headers=_REVALIDATE)
+    return _serve_index()
 
 
 # Direct share URLs like https://waytrace.org/s/abc123 (no hash fragment)
@@ -229,4 +257,4 @@ async def serve_frontend():
 # links return 404 and the scan is unreachable.
 @app.get("/s/{url_id}", include_in_schema=False)
 async def serve_scan_view(url_id: str):
-    return FileResponse(FRONTEND_DIR / "index.html", headers=_REVALIDATE)
+    return _serve_index()

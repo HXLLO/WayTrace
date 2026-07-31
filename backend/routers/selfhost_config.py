@@ -15,21 +15,35 @@ from fastapi import APIRouter, HTTPException, Request
 from loguru import logger
 
 from config import settings
-from services import runtime_config
+from services import identity, runtime_config
 
 router = APIRouter()
 
 _GROUPS = (
+    ("instance", "Instance & identity"),
     ("archive", "Archive.org politeness"),
     ("selection", "Snapshot selection"),
     ("queue", "Scans & queue"),
     ("advanced", "Advanced"),
 )
 
+_SETUP_KEY = "setup_completed"
+
 
 def _guard() -> None:
     if not settings.config_panel_enabled:
         raise HTTPException(status_code=404)
+
+
+async def setup_completed() -> bool:
+    """True once the first-run wizard has been completed or skipped."""
+    from db import get_app_state
+    return (await get_app_state(_SETUP_KEY)) == "1"
+
+
+async def _mark_setup_completed() -> None:
+    from db import set_app_state
+    await set_app_state(_SETUP_KEY, "1")
 
 
 def _describe(key: str, spec: runtime_config.Tunable) -> dict:
@@ -60,7 +74,21 @@ async def get_config():
         items = [_describe(k, s) for k, s in runtime_config.TUNABLES.items()
                  if s.group == gkey]
         groups.append({"key": gkey, "title": gtitle, "settings": items})
-    return {"enabled": True, "groups": groups}
+    return {
+        "enabled": True,
+        "groups": groups,
+        "setup_completed": await setup_completed(),
+        "instance_id": await identity.get_instance_id(),
+    }
+
+
+@router.post("/api/config/complete-setup")
+async def complete_setup():
+    """Mark the first-run wizard done (whether completed or skipped) so it does
+    not show again. Self-host only."""
+    _guard()
+    await _mark_setup_completed()
+    return {"setup_completed": True}
 
 
 @router.put("/api/config")

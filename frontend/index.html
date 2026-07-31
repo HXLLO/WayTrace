@@ -35,17 +35,29 @@
   <meta name="twitter:image" content="https://waytrace.org/icons/icon-512.png">
 
   <link rel="stylesheet" href="/styles.css">
+  <!--WT_DEFAULTS-->
   <script>
     // Apply the persisted theme synchronously, before paint, so the user
     // never sees a dark-to-light flash on reload. Default stays warm-dark.
+    // Precedence: a saved localStorage choice > the instance default injected
+    // above as window.__WT_DEFAULTS__ (self-host) > the hardcoded dark default.
     try {
       var t = localStorage.getItem('wt_theme');
+      var tp = localStorage.getItem('wt_theme_pref');
+      var d = (typeof window.__WT_DEFAULTS__ === 'object' && window.__WT_DEFAULTS__) || null;
       if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
       // Custom palette (precomputed by the themes page): restore before paint too.
       var tv = JSON.parse(localStorage.getItem('wt_theme_vars') || 'null');
       if (tv) {
         var set = (t === 'light' ? tv.light : tv.dark) || {};
         for (var k in set) document.documentElement.style.setProperty(k, set[k]);
+      }
+      // Instance default theme: only when the visitor has made no choice yet.
+      // Full preset vars are applied by app.js on load; here we just set the
+      // light/dark mode so there is no flash. Presets are dark unless known light.
+      if (!t && !tp && d && d.theme) {
+        var LIGHT_PRESETS = { pastel: 1, solaire: 1, sakura: 1, brume: 1, galerie: 1, estampe: 1 };
+        document.documentElement.setAttribute('data-theme', LIGHT_PRESETS[d.theme] ? 'light' : 'dark');
       }
     } catch (_) {}
   </script>
@@ -99,7 +111,7 @@
     </div>
     <p class="home-wayback"><span data-i18n="home.archivedby">Data archived by</span> <a href="https://web.archive.org" target="_blank" rel="noopener"><img class="wb-logo" src="/icons/wayback.svg" alt="Wayback Machine"></a></p>
     <p class="home-caption" data-i18n-html="home.caption">Public data only &middot; <a href="#/legal">Legal &amp; licence</a></p>
-    <p class="home-version" data-i18n-html="home.version">WayTrace v1.8.1 &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">themes</a></p>
+    <p class="home-version" data-i18n-html="home.version">WayTrace v1.8.2 &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">themes</a></p>
     <p class="home-provenance" data-i18n="home.provenance">Open-source OSINT tool.</p>
   </div>
 
@@ -187,6 +199,15 @@
         </div>
       </section>
 
+      <!-- Categories (per-scan override, seeded from the instance default) -->
+      <section class="scope-card scope-cats-card" id="scope-card-cats">
+        <div class="scope-card-head scope-cats-head" id="scope-cats-head" role="button" tabindex="0" aria-expanded="false" onclick="toggleScopeCats()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleScopeCats();}">
+          <div class="scope-card-title"><span data-i18n="scope.cats.title">Categories</span> <span class="scope-card-meta" id="scope-cats-summary"></span></div>
+          <span class="scope-cats-caret" id="scope-cats-caret" aria-hidden="true">+</span>
+        </div>
+        <div class="catpick scope-cats-body" id="scope-cats" hidden></div>
+      </section>
+
       <!-- Exclusions -->
       <section class="scope-card" id="scope-card-excl">
         <div class="scope-card-head">
@@ -254,7 +275,67 @@
     <div class="scope-cap-note is-capped config-restart-bar" id="config-restart-note" hidden></div>
     <div id="config-groups"></div>
     <div class="themes-actions">
+      <button class="btn" type="button" onclick="location.hash='#/setup'" data-i18n="config.runsetup">Run setup again</button>
       <button class="btn" type="button" onclick="configSafeValues()" data-i18n="config.safe">Back to safe values</button>
+    </div>
+  </div>
+</div>
+
+<div id="view-setup" class="view">
+  <div class="setup-page">
+    <div class="setup-card">
+      <div class="setup-head">
+        <h1 class="setup-title" data-i18n="setup.title">Set up your WayTrace instance</h1>
+        <p class="setup-lead" data-i18n="setup.lead">A few optional choices to make this instance yours. You can change all of it later in Settings.</p>
+        <button type="button" class="setup-skip" onclick="setupSkip()" data-i18n="setup.skip">Skip for now</button>
+      </div>
+
+      <section class="setup-section">
+        <h2 class="setup-h2" data-i18n="setup.name.title">Instance name</h2>
+        <p class="setup-desc" data-i18n="setup.name.desc">Shown in the navigation bar and the browser tab. Leave blank to keep plain WayTrace.</p>
+        <input type="text" id="setup-name" class="config-text setup-input" maxlength="60" placeholder="WayTrace" data-i18n-ph="setup.name.ph" spellcheck="false" oninput="setupOnName()">
+        <div class="setup-brand-preview">
+          <span class="setup-brand-label" data-i18n="setup.name.preview">Preview</span>
+          <span class="nav-brand setup-brand" id="setup-brand-preview">Way<span>Trace</span></span>
+        </div>
+      </section>
+
+      <section class="setup-section">
+        <h2 class="setup-h2" data-i18n="setup.theme.title">Appearance</h2>
+        <p class="setup-desc" data-i18n="setup.theme.desc">Pick the default theme new visitors see. Each theme has a light and a dark face.</p>
+        <div class="setup-mode" role="group" aria-label="Light or dark">
+          <button type="button" class="setup-mode-btn" data-mode="dark" onclick="setupSetMode('dark')" data-i18n="setup.theme.dark">Dark</button>
+          <button type="button" class="setup-mode-btn" data-mode="light" onclick="setupSetMode('light')" data-i18n="setup.theme.light">Light</button>
+        </div>
+        <div class="themes-grid setup-themes" id="setup-themes"></div>
+      </section>
+
+      <section class="setup-section">
+        <h2 class="setup-h2" data-i18n="setup.identity.title">Archive.org identity</h2>
+        <p class="setup-desc" data-i18n="setup.identity.desc">Every request WayTrace sends to archive.org carries a stable identifier for this instance. This is honest attribution, not a disguise.</p>
+        <div class="setup-id-row">
+          <span class="setup-id-label" data-i18n="setup.identity.id">Instance ID</span>
+          <code class="setup-id-val" id="setup-instance-id">…</code>
+        </div>
+        <label class="setup-field-label" for="setup-contact" data-i18n="setup.identity.contact">Operator contact (optional)</label>
+        <input type="text" id="setup-contact" class="config-text setup-input" placeholder="you@example.com" data-i18n-ph="setup.identity.contact.ph" spellcheck="false" oninput="setupOnContact()">
+        <small class="setup-hint" data-i18n="setup.identity.contact.hint">Sent to archive.org so they can reach you. Leave blank to use the project URL.</small>
+        <div class="setup-ua-row">
+          <span class="setup-id-label" data-i18n="setup.identity.ua">User-Agent</span>
+          <code class="setup-ua-val" id="setup-ua-preview"></code>
+        </div>
+      </section>
+
+      <section class="setup-section">
+        <h2 class="setup-h2" data-i18n="setup.cats.title">Default categories</h2>
+        <p class="setup-desc" data-i18n="setup.cats.desc">The intelligence categories WayTrace extracts by default. All are on to start; you can also narrow them for a single scan.</p>
+        <div class="catpick" id="setup-cats"></div>
+      </section>
+
+      <div class="setup-footer">
+        <button type="button" class="btn" onclick="location.hash='#/'" data-i18n="setup.back">Back</button>
+        <button type="button" class="btn btn-accent" onclick="setupSave()" data-i18n="setup.save">Save &amp; start</button>
+      </div>
     </div>
   </div>
 </div>

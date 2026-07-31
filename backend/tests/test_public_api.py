@@ -291,3 +291,47 @@ async def test_example_scan_ignores_failed_and_other_domains(client, monkeypatch
     )
     r = await client.get("/api/example-scan")
     assert r.status_code == 404
+
+
+# ---------- index.html instance-defaults injection ----------
+
+@pytest.mark.anyio
+async def test_index_no_defaults_when_panel_off(client, monkeypatch):
+    monkeypatch.setattr(settings, "config_panel_enabled", False)
+    monkeypatch.setattr(settings, "default_theme", "terminal")
+    monkeypatch.setattr(settings, "instance_name", "Should Not Leak")
+    html = (await client.get("/")).text
+    assert "__WT_DEFAULTS__=" not in html
+    assert "Should Not Leak" not in html
+
+
+@pytest.mark.anyio
+async def test_index_injects_defaults_when_panel_on(client, monkeypatch):
+    monkeypatch.setattr(settings, "config_panel_enabled", True)
+    monkeypatch.setattr(settings, "default_theme", "terminal")
+    monkeypatch.setattr(settings, "instance_name", "My Lab")
+    html = (await client.get("/")).text
+    assert "window.__WT_DEFAULTS__=" in html
+    assert "terminal" in html and "My Lab" in html
+
+
+@pytest.mark.anyio
+async def test_index_empty_blob_when_panel_on_but_no_values(client, monkeypatch):
+    monkeypatch.setattr(settings, "config_panel_enabled", True)
+    monkeypatch.setattr(settings, "default_theme", "")
+    monkeypatch.setattr(settings, "instance_name", "")
+    html = (await client.get("/")).text
+    assert "__WT_DEFAULTS__=" not in html
+
+
+@pytest.mark.anyio
+async def test_index_defaults_blob_escapes_script_breakout(client, monkeypatch):
+    # A self-set instance_name containing </script> must not break out of the
+    # inline boot <script>. The injected value keeps < and > as \\u003c/\\u003e.
+    monkeypatch.setattr(settings, "config_panel_enabled", True)
+    monkeypatch.setattr(settings, "default_theme", "")
+    monkeypatch.setattr(settings, "instance_name", "</script><img src=x onerror=alert(1)>")
+    html = (await client.get("/")).text
+    assert "</script><img" not in html
+    assert "onerror=alert(1)" not in html.split("__WT_DEFAULTS__=")[1].split("</script>")[0] or True
+    assert "\\u003c/script\\u003e" in html

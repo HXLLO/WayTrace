@@ -200,13 +200,26 @@ async def _persist_and_finish(job_id: str, start: float) -> None:
     await store.finish_job(job_id, duration_seconds=duration)
 
 
+def resolve_categories(config: ScanConfig | None) -> list[str] | None:
+    """Which extraction categories a scan runs. A non-empty explicit per-scan
+    list wins; otherwise fall back to the instance default
+    (`settings.default_categories`); if that is also empty, return None meaning
+    "run all categories". An explicit empty list is normalised to None (all),
+    never "extract nothing", so no code path can produce an all-empty report."""
+    if config is not None and config.categories:
+        return config.categories
+    if settings.default_categories:
+        return list(settings.default_categories)
+    return None
+
+
 async def _scan_pipeline(
     job_id: str, domain: str, start: float,
     config: ScanConfig | None = None,
     selected_snapshots: list[dict] | None = None,
 ) -> None:
     empty_results = {cat: [] for cat in ALL_CATEGORIES}
-    categories = config.categories if config else None
+    categories = resolve_categories(config)
 
     try:
         pages_deduped = 0

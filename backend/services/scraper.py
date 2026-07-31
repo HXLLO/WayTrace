@@ -16,7 +16,7 @@ from store import store
 WAYBACK_URL = "https://web.archive.org/web/{timestamp}id_/{url}"
 
 # Single-source User-Agent reused by the CDX collector and this scraper.
-from config import USER_AGENT
+from services import identity
 
 # Upper bound on a honored Retry-After. 600 s is long enough to survive a
 # genuine server cooldown, short enough that a misbehaving or adversarial
@@ -375,7 +375,7 @@ async def scrape_snapshots(
 
         return result
 
-    headers = {"User-Agent": USER_AGENT}
+    headers = {"User-Agent": await identity.current_user_agent()}
     # Optional wall-clock budget for the scrape phase. archive.org latency is
     # erratic (a single page can stall 30s+), so rather than let one slow scan
     # drag on, or trip the hard job timeout and lose everything, we stop once the

@@ -28,7 +28,7 @@ from loguru import logger
 from config import settings
 from services import archive_health, archive_rate
 from services.net_guard import GuardedResolver, guarded_wayback_get
-from config import USER_AGENT
+from services import identity
 from services.scraper import _get_global_sem
 
 # A favicon is tiny; cap the read so a mislabelled large asset can't hurt us.
@@ -149,7 +149,7 @@ async def hash_favicons(favicons: list[dict], domain: str) -> int:
         return 0
 
     timeout = aiohttp.ClientTimeout(total=_FETCH_TIMEOUT)
-    headers = {"User-Agent": USER_AGENT}
+    headers = {"User-Agent": await identity.current_user_agent()}
     hashed = 0
 
     async def _one(session: aiohttp.ClientSession, item: dict, url: str) -> None:

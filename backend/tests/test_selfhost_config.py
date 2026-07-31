@@ -42,10 +42,32 @@ async def client():
 def test_registry_matches_settings_fields():
     for key, spec in runtime_config.TUNABLES.items():
         assert hasattr(settings, key), f"unknown settings field: {key}"
-        assert spec.group in {"archive", "selection", "queue", "advanced"}
+        assert spec.group in {"instance", "archive", "selection", "queue", "advanced"}
         if spec.type in {"int", "float"}:
             assert spec.min is not None and spec.max is not None
             assert spec.min <= spec.recommended <= spec.max
+
+
+def test_coerce_multichoice_categories():
+    from services.extractor.finalize import ALL_CATEGORIES
+    good = [ALL_CATEGORIES[2], ALL_CATEGORIES[0]]
+    out = runtime_config.coerce("default_categories", good)
+    # returned in canonical ALL_CATEGORIES order, de-duplicated
+    assert out == [ALL_CATEGORIES[0], ALL_CATEGORIES[2]]
+    assert runtime_config.coerce("default_categories", []) == []
+    with pytest.raises(ValueError):
+        runtime_config.coerce("default_categories", ["not_a_category"])
+    with pytest.raises(ValueError):
+        runtime_config.coerce("default_categories", "endpoints")  # not a list
+
+
+def test_coerce_instance_strings_and_theme():
+    assert runtime_config.coerce("instance_name", "  My Lab  ") == "My Lab"
+    assert runtime_config.coerce("operator_contact", "ops@x.io") == "ops@x.io"
+    assert runtime_config.coerce("default_theme", "") == ""
+    assert runtime_config.coerce("default_theme", "terminal") == "terminal"
+    with pytest.raises(ValueError):
+        runtime_config.coerce("default_theme", "nonexistent-preset")
 
 
 @pytest.mark.asyncio

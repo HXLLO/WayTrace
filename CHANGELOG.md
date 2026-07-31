@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.8.2
+
+- **First-run setup for self-hosted instances.** On first launch a skippable wizard configures the instance name, default theme, operator identity, and default extraction categories. Everything stays editable afterwards in Settings, and a "Run setup again" button reopens it.
+- **Honest per-instance identity.** Each instance generates a stable random id folded into the archive.org User-Agent, with an optional operator contact, so instances are attributed individually instead of all sharing one project-wide identity. This is attribution, not evasion: the identity never rotates and still names WayTrace.
+- **Default extraction categories.** Pick which of the 43 categories an instance runs by default (empty runs all), turning an instance into a focused scanner, with a per-scan override in the advanced step to narrow or restore categories for a single scan.
+- **Instance branding.** An instance name shows in the header and page title, and a default theme is applied before first paint (no flash) when the browser has no saved choice.
+- All of the above is self-host only; the hosted service is unchanged.
+
 ## v1.8.1
 
 - **Settings panel trimmed for self-hosting.** Two settings that only make sense for a public multi-user service behind a proxy have been removed from the panel: the per-client-IP scan limit (an abuse net) and the "trust Cloudflare headers" toggle. A single-user self-hosted install has no use for either.

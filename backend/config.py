@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Repo root, resolved from this file so it does not depend on the CWD uvicorn
@@ -14,12 +14,7 @@ ENV_FILES = (_REPO_ROOT / ".env", Path(".env"))
 
 # Single source of truth for the tool version, surfaced in the API (/api/health,
 # OpenAPI) and injected into the frontend footer.
-APP_VERSION = "1.8.1"
-
-# Shared User-Agent for every archive.org request (CDX collector, page scraper,
-# favicon fetcher). One polite identity so the Internet Archive can attribute
-# and contact us.
-USER_AGENT = f"WayTrace/{APP_VERSION} (OSINT research tool; +https://github.com/thomashousset/WayTrace)"
+APP_VERSION = "1.8.2"
 
 
 class Settings(BaseSettings):
@@ -94,6 +89,18 @@ class Settings(BaseSettings):
     # returns its url_id, so the homepage "See an example" button always opens
     # a real report. Empty string disables the feature.
     example_scan_domain: str = "xss.is"
+
+    # Self-host instance personalization (first-run wizard + Settings panel).
+    # All four are empty by default so a fresh instance behaves exactly as
+    # before; the hosted service leaves them empty too. instance_name brands
+    # the UI, operator_contact is folded into the archive.org User-Agent (see
+    # services/identity.py), default_theme is applied before paint when the
+    # browser has no saved theme, and default_categories (empty = all 43)
+    # narrows extraction for scans submitted without an explicit set.
+    instance_name: str = ""
+    operator_contact: str = ""
+    default_theme: str = ""
+    default_categories: list[str] = Field(default_factory=list)
 
     # Self-host configuration panel (#/config + /api/config): edit the scan and
     # archive.org politeness settings from the UI, persisted in app_state.

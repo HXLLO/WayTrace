@@ -79,6 +79,16 @@ async def service_status():
         state = "busy"
     else:
         state = "ok"
+    # First-run gate for the self-host wizard. True (never route to setup) when
+    # the panel is off (hosted) so the wizard is a self-host-only concern.
+    if settings.config_panel_enabled:
+        try:
+            from routers.selfhost_config import setup_completed as _setup_done
+            setup_ok = await _setup_done()
+        except Exception:
+            setup_ok = True
+    else:
+        setup_ok = True
     return {
         "archive": archive,
         "service": {
@@ -93,6 +103,7 @@ async def service_status():
             "scans_7d": scans_7d,
             "retention_days": settings.scan_retention_days,
             "config_panel": settings.config_panel_enabled,
+            "setup_completed": setup_ok,
         },
     }
 

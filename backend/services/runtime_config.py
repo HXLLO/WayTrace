@@ -24,10 +24,20 @@ from config import settings
 _STATE_KEY = "cfg_overrides"
 
 
+# Theme preset ids, kept in sync with THEME_PRESETS in frontend/app.js. The
+# backend only needs the ids (to validate default_theme); the frontend owns the
+# palettes. "" means "ship default" (warm dark).
+THEME_PRESET_IDS: tuple[str, ...] = (
+    "truffe", "encre", "fjord", "retro", "vampire", "tokyo", "pastel", "mousse",
+    "estampe", "solaire", "horizon", "sakura", "miel", "terminal", "neon",
+    "lagon", "rouille", "bordeaux", "brume", "galerie",
+)
+
+
 @dataclass(frozen=True)
 class Tunable:
-    group: str                      # archive | selection | queue | advanced
-    type: str                       # int | float | bool | str | choice
+    group: str                      # instance | archive | selection | queue | advanced
+    type: str                       # int | float | bool | str | choice | multichoice
     desc: str                       # short English description (frontend i18n)
     recommended: object = None
     min: float | None = None
@@ -41,7 +51,27 @@ class Tunable:
     infinite_at: object = None      # value that means "unlimited" (e.g. 0), shown as ∞
 
 
+def _all_categories() -> tuple[str, ...]:
+    # Called once while building TUNABLES below, so the extractor is imported
+    # when this module loads. That is fine: the scan router already imports it,
+    # and the import is cheap and side-effect-free.
+    from services.extractor.finalize import ALL_CATEGORIES
+    return tuple(ALL_CATEGORIES)
+
+
 TUNABLES: dict[str, Tunable] = {
+    # --- instance & identity (self-host personalization) -------------------
+    "instance_name": Tunable(
+        "instance", "str", "Display name for this instance, shown in the header and page title. Empty uses plain WayTrace."),
+    "operator_contact": Tunable(
+        "instance", "str", "Optional email or URL sent to archive.org in the User-Agent so they can reach you. Empty uses the project URL.",
+        hook="ua_reset"),
+    "default_theme": Tunable(
+        "instance", "choice", "Theme applied on first visit when the browser has no saved choice. Empty uses the default dark theme.",
+        recommended="", choices=("",) + THEME_PRESET_IDS),
+    "default_categories": Tunable(
+        "instance", "multichoice", "Extraction categories run by default. Empty runs all of them; a subset makes this instance a focused scanner.",
+        recommended=(), choices=_all_categories()),
     # --- archive.org politeness -------------------------------------------
     "archive_rate_per_minute": Tunable(
         "archive", "int", "Starting request rate of the adaptive governor.",
@@ -193,6 +223,16 @@ def coerce(key: str, value) -> object:
         if not isinstance(value, str) or value not in spec.choices:
             raise ValueError(f"{key}: must be one of {', '.join(spec.choices)}")
         return value
+    if spec.type == "multichoice":
+        if not isinstance(value, list) or any(not isinstance(v, str) for v in value):
+            raise ValueError(f"{key}: expected a list of strings")
+        allowed = set(spec.choices)
+        unknown = [v for v in value if v not in allowed]
+        if unknown:
+            raise ValueError(f"{key}: unknown value(s): {', '.join(unknown)}")
+        # De-duplicate, preserving the canonical choices order for a stable blob.
+        chosen = set(value)
+        return [c for c in spec.choices if c in chosen]
     if spec.type == "str":
         if not isinstance(value, str):
             raise ValueError(f"{key}: expected a string")
@@ -207,6 +247,9 @@ def _run_hooks(hooks: set[str]) -> None:
     if "sem_reset" in hooks:
         from services import scraper
         scraper.reset_global_semaphore()
+    if "ua_reset" in hooks:
+        from services import identity
+        identity.reset_ua_cache()
 
 
 def apply(values: dict[str, object]) -> list[str]:
