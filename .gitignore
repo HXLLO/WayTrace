@@ -18,6 +18,11 @@ env/
 .env.prod
 *.env.local
 
+# Local SQLite database (bare-metal default lands at the repo root)
+waytrace.db
+waytrace.db-wal
+waytrace.db-shm
+
 # Production deployment config (kept private, never published)
 /deploy/
 /docs/DEPLOYMENT.md

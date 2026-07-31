@@ -97,9 +97,31 @@ async def test_scan_invalid_domain(client):
 
 
 @pytest.mark.anyio
-async def test_scan_rejects_url(client):
-    resp = await client.post("/api/scan", json={"domain": "https://example.com"})
-    assert resp.status_code == 422
+async def test_scan_accepts_pasted_url(client):
+    # People paste full URLs from the address bar; the host must be extracted
+    # instead of rejecting the submission.
+    resp = await client.post(
+        "/api/scan", json={"domain": "https://www.pasted-url-test.com/some/page?q=1"})
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "queued"
+
+
+def test_normalize_domain_url_forms():
+    from models import _normalize_domain
+    assert _normalize_domain("https://example.com") == "example.com"
+    assert _normalize_domain("http://www.example.com/") == "example.com"
+    assert _normalize_domain("https://sub.example.com/path/page.html#frag") == "sub.example.com"
+    assert _normalize_domain("example.com:8080") == "example.com"
+    assert _normalize_domain("user:pass@example.com") == "example.com"
+    assert _normalize_domain("EXAMPLE.com.") == "example.com"
+
+
+def test_normalize_domain_still_rejects_garbage():
+    from models import _normalize_domain
+    for bad in ["not_a_domain", "https://192.168.1.1/admin", "http://",
+                "just words", "example", ""]:
+        with pytest.raises(ValueError):
+            _normalize_domain(bad)
 
 
 @pytest.mark.anyio
@@ -376,6 +398,87 @@ async def test_persist_and_finish_does_not_publish_on_failure(tmp_path, monkeypa
     persisted = await get_job_by_url_id(url_id)
     assert persisted is not None
     assert persisted["is_published"] == 0
+
+
+@pytest.mark.anyio
+async def test_persist_and_finish_pins_example_scan(tmp_path, monkeypatch):
+    """A completed scan of the example domain persists with a far-future
+    expiry so the homepage demo report never falls out of retention."""
+    from datetime import datetime, timedelta, timezone
+    from db import init_db, get_job_by_url_id
+    from routers.scan import _persist_and_finish
+
+    db_path = str(tmp_path / "wt.db")
+    monkeypatch.setattr(settings, "database_url", db_path)
+    monkeypatch.setattr(settings, "example_scan_domain", "demo-pin.example")
+    await init_db(db_path)
+
+    await store._reset_for_tests()
+    res = await store.create_job("demo-pin.example", client_ip="1.2.3.4")
+    await store.update_job(res["job_id"], status="completed", progress=100)
+    await _persist_and_finish(res["job_id"], start=0.0)
+
+    persisted = await get_job_by_url_id(res["url_id"])
+    assert persisted is not None
+    expires = datetime.strptime(
+        persisted["expires_at"], "%Y-%m-%dT%H:%M:%SZ"
+    ).replace(tzinfo=timezone.utc)
+    assert expires > datetime.now(timezone.utc) + timedelta(days=3650)
+
+
+@pytest.mark.anyio
+async def test_persist_and_finish_does_not_pin_failed_example_scan(tmp_path, monkeypatch):
+    """A FAILED scan of the example domain keeps the normal retention window:
+    only a completed report is worth pinning forever."""
+    from datetime import datetime, timedelta, timezone
+    from db import init_db, get_job_by_url_id
+    from routers.scan import _persist_and_finish
+
+    db_path = str(tmp_path / "wt.db")
+    monkeypatch.setattr(settings, "database_url", db_path)
+    monkeypatch.setattr(settings, "example_scan_domain", "demo-pin.example")
+    await init_db(db_path)
+
+    await store._reset_for_tests()
+    res = await store.create_job("demo-pin.example", client_ip="1.2.3.4")
+    await store.update_job(res["job_id"], status="failed", step="Boom")
+    await _persist_and_finish(res["job_id"], start=0.0)
+
+    persisted = await get_job_by_url_id(res["url_id"])
+    assert persisted is not None
+    expires = datetime.strptime(
+        persisted["expires_at"], "%Y-%m-%dT%H:%M:%SZ"
+    ).replace(tzinfo=timezone.utc)
+    assert expires < datetime.now(timezone.utc) + timedelta(
+        days=settings.scan_retention_days + 1
+    )
+
+
+@pytest.mark.anyio
+async def test_persist_and_finish_does_not_pin_other_domains(tmp_path, monkeypatch):
+    """Completed scans of any other domain keep the normal retention window."""
+    from datetime import datetime, timedelta, timezone
+    from db import init_db, get_job_by_url_id
+    from routers.scan import _persist_and_finish
+
+    db_path = str(tmp_path / "wt.db")
+    monkeypatch.setattr(settings, "database_url", db_path)
+    monkeypatch.setattr(settings, "example_scan_domain", "demo-pin.example")
+    await init_db(db_path)
+
+    await store._reset_for_tests()
+    res = await store.create_job("ordinary.example", client_ip="1.2.3.4")
+    await store.update_job(res["job_id"], status="completed", progress=100)
+    await _persist_and_finish(res["job_id"], start=0.0)
+
+    persisted = await get_job_by_url_id(res["url_id"])
+    assert persisted is not None
+    expires = datetime.strptime(
+        persisted["expires_at"], "%Y-%m-%dT%H:%M:%SZ"
+    ).replace(tzinfo=timezone.utc)
+    assert expires < datetime.now(timezone.utc) + timedelta(
+        days=settings.scan_retention_days + 1
+    )
 
 
 def test_preflight_response_structure():

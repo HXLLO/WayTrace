@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 from config import settings
 from db import (
     delete_job,
+    find_recent_scan_for_domain,
     get_job_by_url_id,
     search_scan_pages,
     list_feed,
@@ -176,6 +177,19 @@ async def get_feed(limit: int = 20, offset: int = 0):
     offset = max(0, offset)
     items = await list_feed(limit=limit, offset=offset)
     return FeedResponse(items=items, count=len(items))
+
+
+@router.get("/example-scan")
+async def get_example_scan():
+    """url_id of the permanently-kept demo scan (settings.example_scan_domain),
+    so the homepage can open a real report before the visitor runs anything."""
+    domain = settings.example_scan_domain
+    if not domain:
+        raise HTTPException(status_code=404, detail="No example scan configured")
+    row = await find_recent_scan_for_domain(domain)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Example scan not ready yet")
+    return {"url_id": row["url_id"], "domain": row["domain"]}
 
 
 @router.get("/local-scans")

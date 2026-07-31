@@ -40,6 +40,20 @@ async def archive_status():
 # The banner threshold: this many WAITING scans reads as "high traffic".
 BUSY_WAITING_THRESHOLD = 3
 
+# 7-day scan count for the homepage status strip. /service-status is polled by
+# every open tab, so the DB is only re-asked once a minute.
+_SCANS_7D_TTL = 60.0
+_scans_7d_cache: dict = {"value": 0, "ts": 0.0}
+
+
+async def _scans_last_7_days() -> int:
+    now = time.monotonic()
+    if now - _scans_7d_cache["ts"] > _SCANS_7D_TTL:
+        from db import count_jobs_last_days
+        _scans_7d_cache["value"] = await count_jobs_last_days(7)
+        _scans_7d_cache["ts"] = now
+    return _scans_7d_cache["value"]
+
 
 @router.get("/service-status")
 async def service_status():
@@ -55,6 +69,10 @@ async def service_status():
         active, waiting = len(store.active), len(store.waiting)
     except Exception:
         active, waiting = 0, 0
+    try:
+        scans_7d = await _scans_last_7_days()
+    except Exception:
+        scans_7d = 0
     if maintenance.is_enabled():
         state = "maintenance"
     elif waiting >= BUSY_WAITING_THRESHOLD:
@@ -71,6 +89,8 @@ async def service_status():
             "max_queue": settings.max_queue_total,
             "maintenance": maintenance.is_enabled(),
             "maintenance_message": maintenance.message() or None,
+            "notice": maintenance.notice() or None,
+            "scans_7d": scans_7d,
             "retention_days": settings.scan_retention_days,
         },
     }

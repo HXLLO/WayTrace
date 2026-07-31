@@ -84,7 +84,8 @@ window.addEventListener('error', (e) => _reportClientError(e.error || e.message)
 window.addEventListener('unhandledrejection', (e) => _reportClientError(e.reason));
 
 // Poll the unified service status and surface a single banner with priority:
-// maintenance > archive paused > high traffic > archive slow. A run of genuine
+// maintenance > archive paused > high traffic > archive slow > admin notice.
+// A run of genuine
 // NETWORK failures (the API unreachable, fetch throws) flips to a maintenance
 // notice; a mere non-200 (429/502/503 blip under launch load) does NOT, so a
 // busy moment never masquerades as an outage.
@@ -113,6 +114,7 @@ async function checkServiceStatus() {
   try { d = await r.json(); } catch (_) { return; }
   const svc = (d && d.service) || {};
   const arc = (d && d.archive) || {};
+  renderHomeStatus(svc, arc);
   if (svc.state === 'maintenance') {
     _showStatusBanner('maintenance', svc.maintenance_message ||
       t('Maintenance in progress. Scanning may be unavailable for a short while.'));
@@ -123,6 +125,10 @@ async function checkServiceStatus() {
       t('WayTrace is a victim of its own success right now. New scans are queued and start as soon as a slot frees up.'));
   } else if (arc.state === 'slow') {
     _showStatusBanner('slow', _archiveStatusMessage(arc));
+  } else if (svc.notice) {
+    // Admin-set informational banner: the service is fully available, this
+    // only sets expectations (e.g. slower scans under high traffic).
+    _showStatusBanner('notice', svc.notice);
   } else {
     el.hidden = true;
   }
@@ -450,8 +456,15 @@ const I18N = {
     'themes.reset': 'Revenir au thème par défaut',
     'nav.signin': 'Connexion',
     'nav.scan': 'Analyser',
-    'No published scans yet': 'Aucun scan publié pour l\'instant',
-    'Run one above. A scan stays private until you choose to publish it here.': "Lancez-en un ci-dessus. Un scan reste privé jusqu'à ce que vous choisissiez de le publier ici.",
+    'home.status.label': 'Statut du service',
+    'Operational': 'Opérationnel',
+    'Maintenance': 'Maintenance',
+    'Scanning paused': 'Scans en pause',
+    'Slower than usual': 'Plus lent que d\'habitude',
+    'scan running': 'scan en cours',
+    'scans running': 'scans en cours',
+    'queued': 'en file',
+    'scans this week': 'scans cette semaine',
     'home.tagline': "Internet n'oublie jamais.",
     'home.sub': "Outil d'OSINT pour chercheurs et professionnels. Révélez ce qu'un domaine a exposé au fil du temps (e-mails, sous-domaines, technos, fuites) depuis les archives de la <a href=\"https://web.archive.org\" target=\"_blank\" rel=\"noopener\">Wayback Machine</a>.",
     'home.scan': 'Analyser',
@@ -461,14 +474,8 @@ const I18N = {
     'home.adv.daterange': 'Plage de dates',
     'home.adv.hint': "Les sous-domaines et la densité des snapshots se choisissent à l'étape suivante, une fois archive.org interrogé pour ce domaine.",
     'home.hint': 'Appuyez sur <kbd>Entrée</kbd> pour choisir les sous-domaines, les dates et la densité avant de lancer.',
-    'home.cap.identities': 'Identités',
-    'home.cap.identities.d': 'E-mails, personnes, comptes apparus au fil du temps.',
-    'home.cap.infra': 'Infrastructure',
-    'home.cap.infra.d': 'Sous-domaines, stack technique, endpoints, en-têtes.',
-    'home.cap.timeline': 'Chronologie',
-    'home.cap.timeline.d': 'Quand chaque élément est apparu, et quand il a disparu.',
     'home.caption': 'Données publiques uniquement &middot; <a href="#/legal">Mentions légales</a>',
-    'home.version': 'WayTrace v1.7.2 &middot; hébergé &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">thèmes</a>',
+    'home.version': 'WayTrace v1.7.3 &middot; hébergé &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">thèmes</a>',
     'home.archivedby': 'Archives par',
     'Pages read from': 'Pages lues depuis',
     'Querying archive.org': 'Interrogation archive.org',
@@ -529,8 +536,6 @@ const I18N = {
     'Favicon over time': 'Favicon dans le temps',
     'Tick categories or pivots on the left to build a timeline.': 'Cochez des catégories ou des pivots à gauche pour construire une frise.',
     'Copy': 'Copier',
-    "Couldn't load recent scans": 'Impossible de charger les scans récents',
-    'Check your connection and try again.': 'Vérifiez votre connexion et réessayez.',
     'Retry': 'Réessayer',
     'Scan complete': 'Scan terminé',
     'Filter extracted results': 'Filtrer les résultats extraits',
@@ -538,7 +543,8 @@ const I18N = {
     'Copied': 'Copié',
     'home.provenance': "Outil OSINT open source. La version hébergée limite le nombre de snapshots par scan ; auto-hébergez-la depuis GitHub pour analyser un domaine en entier.",
     'home.ethic': "Conçu pour les chercheurs en sécurité, les équipes, les journalistes et les professionnels curieux. Utilisez ce que vous trouvez de façon responsable : signalez les risques aux personnes qui possèdent les données, jamais contre elles.",
-    'home.feed.title': 'Scans publiés récemment',
+    'home.example': "Voir un exemple de rapport",
+    'The example report is being prepared. Try again in a moment.': "L'exemple de rapport est en préparation. Réessayez dans un instant.",
     'home.mrp.all': 'Toutes les dates',
     'mrp.all': 'Tout',
     'mrp.12m': '12 derniers mois',
@@ -903,7 +909,7 @@ function navigate(hash) {
 
   if (view === 'home') {
     $('domain-input').focus();
-    loadHomeFeed();
+    checkServiceStatus();   // refresh the status strip on every return home
   } else if (view === 'scan-public' && parts[1]) {
     const newUrlId = decodeURIComponent(parts[1]);
     // Reset auto-publish state whenever the visible scan changes so the
@@ -962,6 +968,26 @@ function startAdvancedScan() {
   _pendingScopePrefill = null;
   _forceRescan = false;   // a fresh homepage scan honours the guardrail
   location.hash = '#/scope/' + encodeURIComponent(raw);
+}
+
+/* "See an example report": open the permanently-kept demo scan so a visitor
+   sees a full report before creating an account. Viewing by url_id is public,
+   so this works signed-out by design. */
+async function openExampleScan(btn) {
+  if (btn) btn.disabled = true;
+  try {
+    const resp = await fetch(API + '/api/example-scan');
+    if (!resp.ok) {
+      showToast(t('The example report is being prepared. Try again in a moment.'));
+      return;
+    }
+    const d = await resp.json();
+    if (d && d.url_id) location.hash = '#/s/' + encodeURIComponent(d.url_id);
+  } catch (_) {
+    showToast(t('The example report is being prepared. Try again in a moment.'));
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 /* ===== MONTH-RANGE PICKER (homepage date calendar) ===== */
@@ -1585,50 +1611,34 @@ async function cancelPublicScan() {
   location.hash = '#/';
 }
 
-function _feedError(listEl, emptyEl) {
-  // A failed request is NOT the same as "no scans yet" — show an error with a
-  // retry, never the empty state (which would misrepresent a network problem).
-  emptyEl.style.display = 'none';
-  listEl.innerHTML =
-    `<div class="feed-error">
-      <div class="feed-error-title">${esc(t("Couldn't load recent scans"))}</div>
-      <div class="feed-error-sub">${esc(t('Check your connection and try again.'))}</div>
-      <button class="btn" onclick="loadHomeFeed()">${esc(t('Retry'))}</button>
-    </div>`;
-}
+// Homepage status strip. It replaced the "latest scans" feed: most scans stay
+// private, so the feed read as dead even on busy days, while live numbers
+// cannot look stale. Data rides the existing /api/service-status poll.
+// The weekly figure is the real scans_7d count from the API.
+let WEEK_COUNT_BASELINE = 0;
 
-async function loadHomeFeed() {
-  const listEl = $('home-feed-list');
-  const emptyEl = $('home-feed-empty');
-  if (!listEl) return;
-  try {
-    const resp = await fetch(API + '/api/feed?limit=6');
-    if (!resp.ok) {
-      _feedError(listEl, emptyEl);
-      return;
-    }
-    const data = await resp.json();
-    if (!data.items || data.items.length === 0) {
-      listEl.innerHTML = '';
-      emptyEl.style.display = 'flex';   // genuine empty 200: "no scans yet"
-      return;
-    }
-    emptyEl.style.display = 'none';
-    listEl.innerHTML = data.items.map(it => {
-      const top = (it.summary?.top_categories || []).slice(0, 3)
-        .map(c => `<span class="pub-chip">${esc(catLabel(c.name))} · ${c.count}</span>`)
-        .join('');
-      return `
-        <a class="feed-card" href="#/s/${encodeURIComponent(it.url_id)}">
-          <div class="domain">${esc(it.domain)}</div>
-          <div class="when">${relativePastTime(it.published_at)} · ${it.summary?.snapshots_analyzed || 0} snapshots</div>
-          <div class="chips">${top}</div>
-        </a>
-      `;
-    }).join('');
-  } catch (e) {
-    _feedError(listEl, emptyEl);
+function renderHomeStatus(svc, arc) {
+  const el = $('home-status');
+  const line = $('home-status-line');
+  if (!el || !line) return;
+  let dot = 'ok', label = t('Operational');
+  if (svc.state === 'maintenance') { dot = 'down'; label = t('Maintenance'); }
+  else if (arc.state === 'paused') { dot = 'down'; label = t('Scanning paused'); }
+  else if (svc.state === 'busy' || arc.state === 'slow') { dot = 'warn'; label = t('Slower than usual'); }
+  // Counts are server ints, but coerce defensively: this string goes to innerHTML.
+  const running = Math.max(0, parseInt(svc.active, 10) || 0);
+  const queued = Math.max(0, parseInt(svc.waiting, 10) || 0);
+  const week = Math.max(0, parseInt(svc.scans_7d, 10) || 0) + WEEK_COUNT_BASELINE;
+  const sep = '<span class="hs-sep" aria-hidden="true">·</span>';
+  let html =
+    `<span class="hs-state ${dot}"><span class="hs-dot ${dot}"></span>${esc(label)}</span>` + sep +
+    `<span class="hs-metric"><b>${running}</b> ${esc(running === 1 ? t('scan running') : t('scans running'))}</span>`;
+  if (queued > 0) {
+    html += sep + `<span class="hs-metric"><b>${queued}</b> ${esc(t('queued'))}</span>`;
   }
+  html += sep + `<span class="hs-metric"><b>${week}</b> ${esc(t('scans this week'))}</span>`;
+  line.innerHTML = html;
+  el.hidden = false;
 }
 
 function formatEta(seconds) {
@@ -1734,8 +1744,11 @@ const SCOPE_EXCL_PRESETS = ['blog', 'tag', 'category', 'author', 'page/', 'feed'
 async function startScan() {
   // The navbar / home scan button routes through the interactive preflight
   // (subdomain + timeline picker) so every scan can be tuned before launch.
+  // Accept whatever people paste from the address bar: keep only the host.
   const raw = ($('domain-input')?.value || '').trim().toLowerCase()
-    .replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '');
+    .replace(/^[a-z][a-z0-9+.-]*:\/\//, '')
+    .split('/')[0].split('?')[0].split('#')[0].split(':')[0]
+    .replace(/^www\./, '');
   if (!raw) { showToast('Type a domain first.'); return; }
   location.hash = '#/scope/' + encodeURIComponent(raw);
 }

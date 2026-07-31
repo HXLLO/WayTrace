@@ -169,13 +169,23 @@ async def _persist_and_finish(job_id: str, start: float) -> None:
         await store.finish_job(job_id, duration_seconds=time.time() - start)
         return
     now = datetime.now(timezone.utc)
+    retention = timedelta(days=settings.scan_retention_days)
+    # The example-domain scan is the permanent product demo: it must survive
+    # the retention purge so the homepage "See an example" button always has
+    # a report to open. Effectively never expires.
+    if (
+        settings.example_scan_domain
+        and live["domain"] == settings.example_scan_domain
+        and live.get("status") == "completed"
+    ):
+        retention = timedelta(days=365 * 100)
     try:
         await _save_job_to_db(
             url_id=live["url_id"],
             domain=live["domain"],
             client_ip=live.get("client_ip", "0.0.0.0"),
             created_at=live["created_at"],
-            expires_at=now + timedelta(days=settings.scan_retention_days),
+            expires_at=now + retention,
             completed_at=now if live.get("status") in ("completed", "failed") else None,
             status=live.get("status", "failed"),
             meta=live.get("meta"),

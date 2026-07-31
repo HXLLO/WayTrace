@@ -1,9 +1,20 @@
+from pathlib import Path
+
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Repo root, resolved from this file so it does not depend on the CWD uvicorn
+# was started from (the README's manual quick start runs from backend/).
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+
+# Env files loaded by the runtime `settings` singleton below: the repo-root
+# .env always, plus a CWD-local .env which takes priority when it differs.
+# Kept out of model_config so Settings() instantiated bare stays hermetic.
+ENV_FILES = (_REPO_ROOT / ".env", Path(".env"))
+
 # Single source of truth for the tool version, surfaced in the API (/api/health,
 # OpenAPI) and injected into the frontend footer.
-APP_VERSION = "1.7.2"
+APP_VERSION = "1.7.3"
 
 # Shared User-Agent for every archive.org request (CDX collector, page scraper,
 # favicon fetcher). One polite identity so the Internet Archive can attribute
@@ -73,6 +84,11 @@ class Settings(BaseSettings):
     # long. 14 days = a domain isn't re-scanned within two weeks.
     scan_retention_days: int = 14
     cleanup_interval_seconds: int = 3600
+    # Permanent demo scan. A completed scan of this domain is persisted with a
+    # far-future expiry (never purged by retention) and /api/example-scan
+    # returns its url_id, so the homepage "See an example" button always opens
+    # a real report. Empty string disables the feature.
+    example_scan_domain: str = "xss.is"
 
     # Security: hide OpenAPI schema + Swagger UI by default in prod.
     # Set EXPOSE_API_DOCS=1 in dev/local for interactive exploration.
@@ -114,8 +130,10 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
 
-    # Database
-    database_url: str = "/data/waytrace.db"
+    # Database. Docker images pin DATABASE_URL=/data/waytrace.db explicitly
+    # (Dockerfile + every compose file); this default only serves bare-metal
+    # runs, where /data is not creatable, so it lands at the repo root.
+    database_url: str = str(_REPO_ROOT / "waytrace.db")
 
     # Auth / accounts (v3). secret_key signs session + magic-link JWTs; override
     # in prod via SECRET_KEY. Email is sent via Resend when resend_api_key is
@@ -158,4 +176,4 @@ class Settings(BaseSettings):
 
 
 
-settings = Settings()
+settings = Settings(_env_file=ENV_FILES)

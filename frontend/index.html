@@ -88,28 +88,20 @@
     <p class="home-hint" data-i18n-html="home.hint">
       Press <kbd>Enter</kbd> to choose subdomains, dates and density before launching.
     </p>
-    <ul class="home-capabilities">
-      <li><span class="home-cap-label" data-i18n="home.cap.identities">Identities</span><span class="home-cap-desc" data-i18n="home.cap.identities.d">Emails, people, accounts that surfaced over time.</span></li>
-      <li><span class="home-cap-label" data-i18n="home.cap.infra">Infrastructure</span><span class="home-cap-desc" data-i18n="home.cap.infra.d">Subdomains, tech stack, endpoints, headers.</span></li>
-      <li><span class="home-cap-label" data-i18n="home.cap.timeline">Timeline</span><span class="home-cap-desc" data-i18n="home.cap.timeline.d">When each fact appeared, and when it disappeared.</span></li>
-    </ul>
+    <button class="home-example-btn" type="button" onclick="openExampleScan(this)">
+      <svg class="home-example-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+      <span data-i18n="home.example">See an example report</span>
+    </button>
+    <div class="home-status" id="home-status" hidden>
+      <div class="hs-label" data-i18n="home.status.label">Service status</div>
+      <div class="hs-line" id="home-status-line"></div>
+    </div>
     <p class="home-wayback"><span data-i18n="home.archivedby">Data archived by</span> <a href="https://web.archive.org" target="_blank" rel="noopener"><img class="wb-logo" src="/icons/wayback.svg" alt="Wayback Machine"></a></p>
     <p class="home-caption" data-i18n-html="home.caption">Public data only &middot; <a href="#/legal">Legal &amp; licence</a></p>
-    <p class="home-version" data-i18n-html="home.version">WayTrace v1.7.2 &middot; hosted &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">themes</a></p>
+    <p class="home-version" data-i18n-html="home.version">WayTrace v1.7.3 &middot; hosted &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">themes</a></p>
     <p class="home-provenance" data-i18n="home.provenance">Open-source OSINT tool. The hosted build caps snapshots per scan; self-host it from GitHub to scan a domain in full.</p>
   </div>
 
-  <div class="home-feed" id="home-feed">
-    <h2 data-i18n="home.feed.title">Recently published scans</h2>
-    <div id="home-feed-list" class="home-feed-grid">
-      <div class="pub-empty" style="padding: 24px;" data-i18n="Loading…">Loading…</div>
-    </div>
-    <div id="home-feed-empty" class="feed-empty" style="display:none;">
-      <svg class="feed-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
-      <div class="feed-empty-title" data-i18n="No published scans yet">No published scans yet</div>
-      <div class="feed-empty-sub" data-i18n="Run one above. A scan stays private until you choose to publish it here.">Run one above. A scan stays private until you choose to publish it here.</div>
-    </div>
-  </div>
 </div>
 
 <div id="view-scan-public" class="view">

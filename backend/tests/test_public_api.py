@@ -170,6 +170,34 @@ async def test_feed_lists_only_published(client):
 
 
 @pytest.mark.anyio
+async def test_feed_dedupes_by_domain(client):
+    """Re-scanning a domain must not show it twice; the feed keeps only the
+    most recently published scan per domain."""
+    import asyncio
+    now = datetime.now(timezone.utc)
+    await save_job(
+        url_id="dup_old", domain="same.com", client_ip="1.1.1.1",
+        created_at=now - timedelta(days=1), expires_at=now + timedelta(days=7),
+        status="completed", meta={}, results={},
+    )
+    await set_published("dup_old", True)
+    await asyncio.sleep(0.02)
+    await save_job(
+        url_id="dup_new", domain="same.com", client_ip="1.1.1.1",
+        created_at=now, expires_at=now + timedelta(days=7),
+        status="completed", meta={}, results={},
+    )
+    await set_published("dup_new", True)
+
+    r = await client.get("/api/feed")
+    body = r.json()
+    domains = [it["domain"] for it in body["items"]]
+    assert domains.count("same.com") == 1
+    ids = [it["url_id"] for it in body["items"]]
+    assert "dup_new" in ids and "dup_old" not in ids
+
+
+@pytest.mark.anyio
 async def test_feed_pagination(client):
     import asyncio
     now = datetime.now(timezone.utc)
@@ -299,3 +327,58 @@ async def test_scan_does_not_reuse_a_different_domain(client):
     r = await client.post("/api/scan", json={"domain": "b.com"})
     assert r.status_code == 200
     assert r.json().get("reused") in (False, None)
+
+
+# ---------- GET /api/example-scan ----------
+
+@pytest.mark.anyio
+async def test_example_scan_returns_latest_completed(client, monkeypatch):
+    monkeypatch.setattr(settings, "example_scan_domain", "demo.example")
+    now = datetime.now(timezone.utc)
+    await save_job(
+        url_id="exdemo_old", domain="demo.example", client_ip="1.1.1.1",
+        created_at=now - timedelta(days=2), expires_at=now + timedelta(days=36500),
+        status="completed", meta={}, results={},
+    )
+    await save_job(
+        url_id="exdemo_new", domain="demo.example", client_ip="1.1.1.1",
+        created_at=now, expires_at=now + timedelta(days=36500),
+        status="completed", meta={}, results={},
+    )
+    r = await client.get("/api/example-scan")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["url_id"] == "exdemo_new"
+    assert body["domain"] == "demo.example"
+
+
+@pytest.mark.anyio
+async def test_example_scan_404_when_not_scanned_yet(client, monkeypatch):
+    monkeypatch.setattr(settings, "example_scan_domain", "demo.example")
+    r = await client.get("/api/example-scan")
+    assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_example_scan_404_when_disabled(client, monkeypatch):
+    monkeypatch.setattr(settings, "example_scan_domain", "")
+    r = await client.get("/api/example-scan")
+    assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_example_scan_ignores_failed_and_other_domains(client, monkeypatch):
+    monkeypatch.setattr(settings, "example_scan_domain", "demo.example")
+    now = datetime.now(timezone.utc)
+    await save_job(
+        url_id="exdemo_fail", domain="demo.example", client_ip="1.1.1.1",
+        created_at=now, expires_at=now + timedelta(days=14),
+        status="failed", meta={}, results={},
+    )
+    await save_job(
+        url_id="exother_ok", domain="other.example", client_ip="1.1.1.1",
+        created_at=now, expires_at=now + timedelta(days=14),
+        status="completed", meta={}, results={},
+    )
+    r = await client.get("/api/example-scan")
+    assert r.status_code == 404

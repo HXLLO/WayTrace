@@ -24,10 +24,12 @@ def _normalize_domain(v: str) -> str:
     v = v.strip().lower()
     if len(v) > 255:
         raise ValueError("Domain too long (max 255 characters)")
-    for prefix in ("https://", "http://"):
-        if v.startswith(prefix):
-            raise ValueError("Provide a domain, not a URL (no http(s)://)")
-    v = v.removeprefix("www.").rstrip("/")
+    # People paste full URLs straight from the address bar; accept them and
+    # keep only the host (scheme, credentials, port, path, query all dropped).
+    v = re.sub(r"^[a-z][a-z0-9+.-]*://", "", v)
+    v = v.split("/", 1)[0].split("?", 1)[0].split("#", 1)[0]
+    v = v.rsplit("@", 1)[-1].split(":", 1)[0]
+    v = v.removeprefix("www.").rstrip(".")
     if IP_RE.match(v):
         raise ValueError("IP addresses are not supported, use a domain name")
     if not DOMAIN_RE.match(v):

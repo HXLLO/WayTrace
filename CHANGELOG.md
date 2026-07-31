@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.7.3
+
+- **The homepage shows the service breathing.** The latest-scans feed in the hero gives way to a live status panel: service state, scans running right now, queue depth, and how many scans ran over the last seven days.
+- **Paste anything.** The scan input now accepts full URLs: scheme, path, query, port and credentials are stripped away and only the domain is kept, instead of rejecting the paste.
+- **Self-hosting works out of the box.** The manual quick start (venv + uvicorn) no longer crashes on first run: the `.env` at the project root is loaded wherever you start uvicorn from, and the database now defaults to `waytrace.db` at the project root instead of Docker's `/data` path. Docker setups are unchanged.
+- **Polish.** Focus rings follow each field's own corner radius, with the hero pill and navbar search sharing the same accent treatment; the recent-scans feed keeps a single card per domain, so re-scanning never shows a duplicate; the service can surface a short informational notice when something is worth announcing.
+
 ## v1.7.2
 
 - **Make WayTrace yours.** New Appearance page (in the profile menu, or via the themes link in the footer): 20 hand-tuned themes, each with a dark and a light face, from classics like Truffe, Encre or Brume to full-mood palettes inspired by beloved editor colorschemes (Retro, Fjord, Vampire, Tokyo, Pastel, Estampe, Solaire...). A custom palette lets you pick a background and an accent per mode; the rest of the interface is derived automatically. Signed in, the theme is saved to your account and follows you across devices; otherwise it sticks to the browser.

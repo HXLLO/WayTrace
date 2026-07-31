@@ -38,6 +38,9 @@ async def test_ok_state(client):
     assert d["service"]["retention_days"] == settings.scan_retention_days
     assert d["service"]["maintenance"] is False
     assert "state" in d["archive"]
+    # 7-day rolling scan count for the homepage status strip.
+    assert isinstance(d["service"]["scans_7d"], int)
+    assert d["service"]["scans_7d"] >= 0
 
 
 @pytest.mark.asyncio

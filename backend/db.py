@@ -302,6 +302,21 @@ async def save_job(
         await db.close()
 
 
+async def count_jobs_last_days(days: int = 7) -> int:
+    """Scans submitted in the rolling last N days, any status. created_at is
+    ISO with a 'T'; datetime('now') uses a space, so normalise before comparing."""
+    db = await get_db()
+    try:
+        cur = await db.execute(
+            "SELECT COUNT(*) FROM jobs WHERE replace(created_at, 'T', ' ') >= datetime('now', ?)",
+            (f"-{int(days)} days",),
+        )
+        row = await cur.fetchone()
+        return int(row[0]) if row else 0
+    finally:
+        await db.close()
+
+
 async def get_app_state(key: str) -> str | None:
     """Read a value from the tiny app_state KV table (maintenance flag etc.)."""
     db = await get_db()
@@ -573,13 +588,25 @@ async def list_feed(limit: int = 20, offset: int = 0) -> list[dict]:
     db = await get_db()
     try:
         now = _iso(datetime.now(timezone.utc))
+        # One row per domain (the most recently published), so re-scanning a
+        # domain never shows it twice in the feed. Keep row j only if no other
+        # published, non-expired row for the same domain is newer, tie-broken by
+        # rowid so two scans published in the same second still resolve to one.
         cur = await db.execute(
-            """SELECT url_id, domain, completed_at, published_at, expires_at, meta, results
-               FROM jobs
-               WHERE is_published = 1 AND expires_at > ?
-               ORDER BY published_at DESC
+            """SELECT j.url_id, j.domain, j.completed_at, j.published_at,
+                      j.expires_at, j.meta, j.results
+               FROM jobs j
+               WHERE j.is_published = 1 AND j.expires_at > ?
+                 AND NOT EXISTS (
+                   SELECT 1 FROM jobs o
+                   WHERE o.is_published = 1 AND o.expires_at > ?
+                     AND o.domain = j.domain
+                     AND (o.published_at > j.published_at
+                          OR (o.published_at = j.published_at AND o.rowid > j.rowid))
+                 )
+               ORDER BY j.published_at DESC
                LIMIT ? OFFSET ?""",
-            (now, limit, offset),
+            (now, now, limit, offset),
         )
         rows = await cur.fetchall()
         items = []
