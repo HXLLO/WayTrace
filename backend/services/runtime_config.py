@@ -120,9 +120,6 @@ TUNABLES: dict[str, Tunable] = {
     "max_queue_total": Tunable(
         "queue", "int", "Hard cap on running plus waiting scans.",
         recommended=100, min=1, max=1000),
-    "max_active_per_ip": Tunable(
-        "queue", "int", "In-flight scans allowed per client IP.",
-        recommended=2, min=1, max=100),
     "scan_timeout_seconds": Tunable(
         "queue", "int", "Hard wall-clock limit of a single scan.",
         recommended=3600, min=60, max=86400, unit="s"),
@@ -136,9 +133,6 @@ TUNABLES: dict[str, Tunable] = {
         "queue", "int", "Pause between expired-scan cleanup passes.",
         recommended=3600, min=60, max=86400, unit="s"),
     # --- advanced ----------------------------------------------------------
-    "trust_cloudflare": Tunable(
-        "advanced", "bool", "Trust Cloudflare headers for the client IP. Only behind Cloudflare.",
-        recommended=False),
     "expose_api_docs": Tunable(
         "advanced", "bool", "Serve the interactive Swagger docs at /docs.",
         recommended=False, restart=True),

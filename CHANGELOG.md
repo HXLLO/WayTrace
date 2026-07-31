@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.8.1
+
+- **Settings panel trimmed for self-hosting.** Two settings that only make sense for a public multi-user service behind a proxy have been removed from the panel: the per-client-IP scan limit (an abuse net) and the "trust Cloudflare headers" toggle. A single-user self-hosted install has no use for either.
+
 ## v1.8.0
 
 - **Rewritten documentation.** The README (English and French) has been rebuilt from scratch to match the software as it is today: 43 extraction categories, the real API surface, the self-hosted Settings panel, no accounts, and corrected defaults throughout. This release marks the 1.8 line, gathering everything since 1.7.2 into one coherent version.
