@@ -70,6 +70,7 @@
       <button class="lang-opt" data-lang="fr" type="button" onclick="setLang('fr')" title="Français"><span class="lang-flag">🇫🇷</span><span class="lang-code">FR</span></button>
     </div>
     <button class="nav-btn" id="history-btn" onclick="location.hash='#/history'" data-i18n="nav.history">History</button>
+    <button class="nav-btn" id="nav-settings-btn" hidden onclick="location.hash='#/config'" data-i18n="nav.settings">Settings</button>
   </div>
 </nav>
 <div id="archive-banner" class="archive-banner" hidden role="status"></div>
@@ -98,9 +99,8 @@
     </div>
     <p class="home-wayback"><span data-i18n="home.archivedby">Data archived by</span> <a href="https://web.archive.org" target="_blank" rel="noopener"><img class="wb-logo" src="/icons/wayback.svg" alt="Wayback Machine"></a></p>
     <p class="home-caption" data-i18n-html="home.caption">Public data only &middot; <a href="#/legal">Legal &amp; licence</a></p>
-    <p class="home-version" data-i18n-html="home.version">WayTrace v1.7.6 &middot; hosted &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">themes</a></p>
-    <p class="home-version" id="home-config-link" hidden><a href="#/config">configuration</a></p>
-    <p class="home-provenance" data-i18n="home.provenance">Open-source OSINT tool. The hosted build caps snapshots per scan; self-host it from GitHub to scan a domain in full.</p>
+    <p class="home-version" data-i18n-html="home.version">WayTrace v1.7.7 &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">themes</a></p>
+    <p class="home-provenance" data-i18n="home.provenance">Open-source OSINT tool.</p>
   </div>
 
 </div>
@@ -141,8 +141,7 @@
         domain. archive.org is rate-limited, so a scan samples a representative set
         of snapshots rather than every capture. Tune the scan below, then launch:
         <b>1</b> pick subdomains, <b>2</b> drop noisy pages, <b>3</b> set the date
-        range and density. A bigger selection means a longer scan (capped at
-        <b id="scope-intro-cap"></b> on the hosted service).
+        range and density. A bigger selection means a longer scan.
       </div>
       <!-- Subdomains -->
       <section class="scope-card" id="scope-card-subs">
@@ -225,7 +224,7 @@
 <div id="view-themes" class="view">
   <div class="themes-page">
     <h1 data-i18n="themes.title">Appearance</h1>
-    <p class="themes-sub" data-i18n="themes.sub">Pick a theme, or build your own. Each theme carries a dark and a light face; the Light/Dark button in the navbar switches between them. Your choice is saved to your account and follows you on any device.</p>
+    <p class="themes-sub" data-i18n="themes.sub">Pick a theme, or build your own. Each theme carries a dark and a light face; the Light/Dark button in the navbar switches between them. Your choice is saved in this browser.</p>
     <div class="themes-grid" id="themes-grid"></div>
     <h2 class="themes-custom-title" data-i18n="themes.custom">Custom palette</h2>
     <p class="themes-sub" data-i18n="themes.customsub">Choose a background and an accent for each mode; surfaces, borders and highlights are derived automatically so the result always stays coherent.</p>
@@ -249,7 +248,7 @@
 
 <div id="view-config" class="view">
   <div class="themes-page">
-    <h1 data-i18n="config.title">Configuration</h1>
+    <h1 data-i18n="config.title">Settings</h1>
     <p class="themes-sub" data-i18n="config.sub">Every scan and archive.org setting of this install, applied live and saved locally. Values in the orange zone are aggressive; the red zone carries a real risk that archive.org blocks your IP. Your machine, your rules.</p>
     <div id="config-disabled" class="scope-cap-note" hidden data-i18n="config.disabled">The configuration panel is disabled on this instance.</div>
     <p class="scope-cap-note is-capped" id="config-restart-note" hidden data-i18n="config.restartnote">Some changed settings only take effect after a server restart.</p>
@@ -316,9 +315,9 @@
     already archived publicly, performs no enrichment beyond those pages, retains
     finished scans for a limited period (7 days on the hosted service), and relies
     on a <strong>legitimate-interest</strong> basis (security research and web
-    transparency). Data subjects may request removal of a published scan (see
-    Contact). The hosted service requires an account to <em>run</em> a scan;
-    viewing a scan by its link and the public feed remain open.</p>
+    transparency). Data subjects may request removal of a scan (see
+    Contact). On the hosted service, running a scan requires an account;
+    viewing a scan by its link stays open.</p>
 
     <h2 data-i18n="legal.h6">6. Source data & third parties</h2>
     <p data-i18n-html="legal.p6">All snapshots originate from the Internet Archive. Their availability,

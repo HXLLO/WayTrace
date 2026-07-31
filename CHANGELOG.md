@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.7.7
+
+- **Self-hosting is simpler.** The self-hosted build has no accounts and needs none: it now carries a first-class **Settings** entry in the navbar (the panel that tunes every scan and archive.org option), instead of a discreet footer link. Copy that assumed a hosted account or service has been reworked so nothing on a local install talks about signing in, a hosted snapshot ceiling, or a feed that no longer exists.
+
 ## v1.7.6
 
 - **A scan can't be deleted by accident anymore.** In the scan history, the delete cross now turns into an explicit "Delete / Keep" choice in place, so it takes a deliberate second click, not one stray tap, to remove a scan.

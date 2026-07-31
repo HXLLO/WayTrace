@@ -443,8 +443,10 @@ let LANG = 'en';
 const I18N = {
   fr: {
     'nav.history': 'Historique',
+    'nav.settings': 'Réglages',
     'themes.title': 'Apparence',
-    'themes.sub': "Choisissez un thème, ou composez le vôtre. Chaque thème a un visage sombre et un visage clair; le bouton Light/Dark de la barre de navigation bascule entre les deux. Votre choix est enregistré sur votre compte et vous suit sur tous vos appareils.",
+    'themes.sub': "Choisissez un thème, ou composez le vôtre. Chaque thème a un visage sombre et un visage clair; le bouton Light/Dark de la barre de navigation bascule entre les deux. Votre choix est enregistré dans ce navigateur.",
+    'themes.subacct': "Connecté, votre thème est enregistré sur votre compte et vous suit sur tous vos appareils.",
     'themes.custom': 'Palette personnalisée',
     'themes.customsub': "Choisissez un fond et un accent pour chaque mode; surfaces, bordures et surlignages sont dérivés automatiquement pour que le résultat reste cohérent.",
     'themes.darkface': 'Visage sombre',
@@ -454,7 +456,7 @@ const I18N = {
     'themes.accent': 'Accent',
     'themes.accent2': 'Accent',
     'themes.reset': 'Revenir au thème par défaut',
-    'config.title': 'Configuration',
+    'config.title': 'Réglages',
     'config.sub': "Tous les réglages de scan et d'archive.org de cette installation, appliqués à chaud et enregistrés localement. La zone orange est agressive; la zone rouge comporte un risque réel qu'archive.org bloque votre IP. Votre machine, vos règles.",
     'config.disabled': "Le panneau de configuration est désactivé sur cette instance.",
     'config.restartnote': "Certains réglages modifiés ne prendront effet qu'après un redémarrage du serveur.",
@@ -520,7 +522,7 @@ const I18N = {
     'home.adv.hint': "Les sous-domaines et la densité des snapshots se choisissent à l'étape suivante, une fois archive.org interrogé pour ce domaine.",
     'home.hint': 'Appuyez sur <kbd>Entrée</kbd> pour choisir les sous-domaines, les dates et la densité avant de lancer.',
     'home.caption': 'Données publiques uniquement &middot; <a href="#/legal">Mentions légales</a>',
-    'home.version': 'WayTrace v1.7.6 &middot; hébergé &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">thèmes</a>',
+    'home.version': 'WayTrace v1.7.7 &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">thèmes</a>',
     'home.archivedby': 'Archives par',
     'Pages read from': 'Pages lues depuis',
     'Querying archive.org': 'Interrogation archive.org',
@@ -586,7 +588,8 @@ const I18N = {
     'Filter extracted results': 'Filtrer les résultats extraits',
     'Search the archived pages': 'Chercher dans les pages archivées',
     'Copied': 'Copié',
-    'home.provenance': "Outil OSINT open source. La version hébergée limite le nombre de snapshots par scan ; auto-hébergez-la depuis GitHub pour analyser un domaine en entier.",
+    'home.provenance': "Outil OSINT open source.",
+    'home.provenance.hosted': "La version hébergée limite le nombre de snapshots par scan ; auto-hébergez-la depuis GitHub pour analyser un domaine en entier.",
     'home.ethic': "Conçu pour les chercheurs en sécurité, les équipes, les journalistes et les professionnels curieux. Utilisez ce que vous trouvez de façon responsable : signalez les risques aux personnes qui possèdent les données, jamais contre elles.",
     'home.historybtn': 'Historique des scans',
     'home.mrp.all': 'Toutes les dates',
@@ -617,7 +620,7 @@ const I18N = {
     'legal.h4': '4. Votre responsabilité',
     'legal.p4': "Vous êtes seul responsable de l'usage que vous faites de WayTrace et de ses résultats, et du respect de toutes les lois qui vous sont applicables et applicables au sujet de votre recherche, y compris dans la juridiction du sujet. Lorsque les résultats contiennent des données personnelles, <strong>vous</strong> agissez en tant que responsable du traitement pour tout traitement ultérieur.",
     'legal.h5': '5. Données personnelles (RGPD)',
-    'legal.p5': "Les pages archivées peuvent contenir des données personnelles (par exemple des adresses e-mail ou des noms). Il n'existe pas d'exemption générale pour les données personnelles publiquement disponibles au titre du RGPD. WayTrace minimise l'exposition par conception : il ne traite que des données déjà archivées publiquement, n'effectue aucun enrichissement au-delà de ces pages, conserve les scans terminés pour une durée limitée (7 jours sur le service hébergé), et s'appuie sur l'<strong>intérêt légitime</strong> (recherche en sécurité et transparence du web). Les personnes concernées peuvent demander le retrait d'un scan publié (voir Contact). Le service hébergé exige un compte pour <em>lancer</em> un scan ; la consultation d'un scan via son lien et le flux public restent ouverts.",
+    'legal.p5': "Les pages archivées peuvent contenir des données personnelles (par exemple des adresses e-mail ou des noms). Il n'existe pas d'exemption générale pour les données personnelles publiquement disponibles au titre du RGPD. WayTrace minimise l'exposition par conception : il ne traite que des données déjà archivées publiquement, n'effectue aucun enrichissement au-delà de ces pages, conserve les scans terminés pour une durée limitée (7 jours sur le service hébergé), et s'appuie sur l'<strong>intérêt légitime</strong> (recherche en sécurité et transparence du web). Les personnes concernées peuvent demander le retrait d'un scan (voir Contact). Sur le service hébergé, lancer un scan nécessite un compte ; la consultation d'un scan via son lien reste ouverte.",
     'legal.h6': '6. Données source et tiers',
     'legal.p6': "Tous les snapshots proviennent de l'Internet Archive. Leur disponibilité, leur exactitude et leur exhaustivité échappent au contrôle de WayTrace ; les résultats peuvent être partiels ou périmés (lacunes d'archive). Merci de respecter également les <a href=\"https://archive.org/about/terms.php\" target=\"_blank\" rel=\"noopener\">conditions de l'Internet Archive</a>.",
     'legal.h7': '7. Licence',
@@ -1687,8 +1690,8 @@ async function cancelPublicScan() {
 let WEEK_COUNT_BASELINE = 0;
 
 function renderHomeStatus(svc, arc) {
-  const cfgLink = $('home-config-link');
-  if (cfgLink) cfgLink.hidden = !svc.config_panel;
+  const navSettings = $('nav-settings-btn');
+  if (navSettings) navSettings.hidden = !svc.config_panel;
   const el = $('home-status');
   const line = $('home-status-line');
   if (!el || !line) return;
