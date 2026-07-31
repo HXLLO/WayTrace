@@ -2,221 +2,37 @@
 
 [English](README.md) · **Français**
 
-> **Internet n'oublie jamais.**
+WayTrace reconstruit l'histoire publique d'un domaine à partir de la Wayback Machine (archive.org). Vous donnez un domaine ; l'outil lit le HTML qu'archive.org a déjà enregistré au fil des ans, choisit les instantanés les plus révélateurs à travers le temps, et en extrait **43 catégories** de renseignement, des e-mails et sous-domaines aux secrets exposés, technologies et personnes. Chaque trouvaille porte les dates `first_seen` et `last_seen` dans l'archive : vous obtenez une chronologie de ce qui est apparu, a changé et a disparu, pas seulement un instantané d'aujourd'hui.
 
-Reconnaissance OSINT qui reconstruit l'historique numérique complet d'un domaine à partir de la Wayback Machine (archive.org). Saisissez un domaine. WayTrace récupère le HTML archivé sur des décennies, sélectionne les snapshots les plus révélateurs, et extrait **43 catégories** de renseignement. Chaque résultat porte des horodatages `first_seen` / `last_seen`, pour une chronologie complète de ce qui est apparu, a changé, puis disparu. Vous pouvez même faire une recherche plein-texte dans le contenu des pages archivées.
+**L'outil ne touche jamais la cible.** Aucun scan de port, aucun brute force, aucune énumération DNS, aucun trafic vers le domaine lui-même. Chaque octet vient de l'archive publique d'archive.org. La cible ne vous voit jamais.
 
-**Aucun scan actif. Aucun brute-force. Aucun trafic vers la cible. Uniquement des données publiques d'archive.org.**
-
-[![En ligne sur waytrace.org](https://img.shields.io/badge/en%20ligne-waytrace.org-6f5bd6)](https://waytrace.org)
+[![En ligne sur waytrace.org](https://img.shields.io/badge/live-waytrace.org-6f5bd6)](https://waytrace.org)
 [![tests](https://github.com/thomashousset/WayTrace/actions/workflows/ci.yml/badge.svg)](https://github.com/thomashousset/WayTrace/actions/workflows/ci.yml)
-![Licence MIT](https://img.shields.io/badge/licence-MIT-blue)
+![Licence MIT](https://img.shields.io/badge/license-MIT-blue)
 ![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green)
-
----
 
 ## Essayer
 
-- **Hébergé :** [**waytrace.org**](https://waytrace.org) - lancez un scan dans le navigateur, rien à installer.
-- **Auto-hébergé :** clonez et `docker compose up` (voir [Démarrage rapide](#démarrage-rapide)). En l'hébergeant vous-même, le plafond de snapshots par scan disparaît : vous pouvez scanner un domaine en entier.
+- **Hébergé :** [**waytrace.org**](https://waytrace.org) lance un scan dans le navigateur, rien à installer.
+- **Auto-hébergé :** clonez et `docker compose up` (voir [Démarrage rapide](#démarrage-rapide)). La version auto-hébergée n'a aucun compte, aucun plafond de snapshots par scan, et une page Réglages qui expose chaque paramètre de scan et d'archive.org : vous pouvez analyser un domaine en entier et régler l'outil à votre machine.
 
-L'interface est entièrement bilingue (anglais / français), basculable depuis la barre de navigation.
-
----
-
-## Nouveautés de la v1.6.0
-
-- **Rapport repensé, deux vues.** *Catégories* (défaut) : un rail des 43 catégories, une ouverte à la fois, montrant ses résultats **et** sa propre activité (apparu/disparu par valeur + un flux de changements daté). *Activité* : cochez des catégories et des pivots précis pour composer une frise partagée, avec la galerie d'évolution des favicons. **La provenance d'abord, neutre** : chaque résultat porte son *first/last-seen*, ses *occurrences* et sa *page source archivée* ; l'UI de « gravité » et le graphe Pivots encombrant disparaissent.
-- **Scan vivant.** L'extraction chevauche le téléchargement et tourne hors de l'event loop : les résultats se remplissent pendant le scan et le serveur reste réactif. Chargement honnête en quatre phases.
-- **Plus de re-scan accidentel.** Un domaine scanné dans les **14 derniers jours** est réutilisé au lieu d'être re-scanné ; « Scan more » force un scan frais.
-- **Finitions.** Recherche plein-texte corrigée pour la ponctuation, focus clavier visible, état d'erreur du flux, et la source Wayback Machine créditée par son logo.
-
-## Nouveautés de la v1.5.0
-
-- **Accès archive.org auto-régulé, sûr pour l'IP.** Chaque requête passe par un gouverneur de débit *adaptatif* partagé (AIMD, comme le contrôle de congestion TCP : il monte doucement tant que les réponses restent propres et se divise par deux au premier refus de connexion) plus une limite de concurrence partagée. La v1.5 fixe le plafond à **80 req/min** (sous le seuil où archive.org a été mesuré refusant les connexions) et fait **démarrer une pause de blocage à 2 minutes** au lieu de 30 fixes, escaladant seulement sur refus consécutifs - un refus passager coûte donc peu.
-- **Un seul scan à la fois.** Un scan actif unique, une file d'attente de 15, et un scan en cours max par client gardent la charge archive.org minimale.
-- **Recherche plein-texte dans le contenu des pages** (depuis la v1.2.0) : cherchez n'importe quel mot dans les pages archivées d'un scan, pas seulement les pivots extraits, avec extraits surlignés et liens vers la capture Wayback.
-- **Finitions UX :** progression de chargement honnête (vraies pages récupérées + ETA mesurée, sans hoquet), bannière d'état archive.org bilingue, catégories de résultats auto-descriptives, et beaucoup de code mort retiré.
-
-Voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet (v1.0 → v1.6).
-
----
+L'interface est entièrement bilingue (anglais et français), basculable depuis la barre de navigation.
 
 ## Sommaire
 
+- [Démarrage rapide](#démarrage-rapide)
 - [Fonctionnement](#fonctionnement)
 - [Le scan guidé](#le-scan-guidé)
-- [Sélection intelligente des snapshots](#sélection-intelligente-des-snapshots)
-- [Catégories d'extraction](#catégories-dextraction)
-- [Résultats et provenance](#résultats-et-provenance)
-- [Interface des résultats](#interface-des-résultats)
-- [Partage et flux public](#partage-et-flux-public)
-- [Démarrage rapide](#démarrage-rapide)
-- [Référence API](#référence-api)
+- [Ce qui est extrait](#ce-qui-est-extrait)
+- [Trouvailles et provenance](#trouvailles-et-provenance)
+- [Le rapport](#le-rapport)
+- [Réglages (auto-hébergé)](#réglages-auto-hébergé)
 - [Configuration](#configuration)
+- [API](#api)
 - [Architecture](#architecture)
 - [Tests](#tests)
 - [Légal et éthique](#légal-et-éthique)
-
----
-
-## Fonctionnement
-
-```
-  saisie du domaine
-       |
-       v
-+---------------------------------------------------------------------+
-|  Phase 1 - Requête CDX                                               |
-|  -------------------------------------------------------------------+
-|  Interroge l'API CDX d'archive.org -> chaque URL HTML archivée       |
-|  Filtre : text/html, statut 200, pagination (resumeKey)             |
-|  Cache gzip local dans data/cdx/ pour éviter les appels redondants   |
-|  Résultat : jusqu'à 50 000+ snapshots avec horodatages + empreintes  |
-+--------------------------------+------------------------------------+
-                                 |
-                                 v
-+---------------------------------------------------------------------+
-|  Phase 2 - Sélection intelligente des snapshots                      |
-|  -------------------------------------------------------------------+
-|  Note chaque chemin d'URL selon sa valeur OSINT (HAUTE/MOYENNE/BASSE)|
-|  Déduplique par empreinte CDX (écarte les doublons, garde le 1er)    |
-|  Répartit les choix au prorata des années, aucune ère ne domine      |
-|  Applique un plafond adaptatif selon la taille du domaine            |
-+--------------------------------+------------------------------------+
-                                 |
-                                 v
-+---------------------------------------------------------------------+
-|  Phase 3 - Récupération (scraping)                                   |
-|  -------------------------------------------------------------------+
-|  Télécharge le HTML depuis la Wayback Machine pour chaque snapshot   |
-|  Requêtes concurrentes (sémaphore) + délai adaptatif, recul sur 429  |
-|  Budget temps : garde ce qui est téléchargé, ne bloque pas sur les   |
-|  traînards. Retire la barre/scripts injectés par Wayback avant parse |
-+--------------------------------+------------------------------------+
-                                 |
-                                 v
-+---------------------------------------------------------------------+
-|  Phase 4 - Extraction et agrégation                                  |
-|  -------------------------------------------------------------------+
-|  Parse avec selectolax (en C, ~10x plus rapide que BeautifulSoup)    |
-|  Exécute 43 catégories d'extraction (regex + DOM + JSON-LD)         |
-|  Agrège first_seen / last_seen / occurrences, marque la page source  |
-+--------------------------------+------------------------------------+
-                                 |
-                                 v
-                  Résultats OSINT structurés
-                  avec métadonnées temporelles
-```
-
----
-
-## Le scan guidé
-
-Chaque scan passe par une courte étape de cadrage interactive avant tout téléchargement ; aucun lancement à l'aveugle.
-
-**Préflight (Phase 1 seule).** Une requête CDX légère, sans scraping. Elle renvoie le nombre total de snapshots, les chemins uniques, la plage de dates archivées, et un navigateur de snapshots par chemin.
-
-**Page de cadrage.** À partir du préflight, vous réglez le scan :
-
-- **Histogramme des snapshots** dans le temps ; cliquez deux années pour borner une plage.
-- **Calendrier au mois près** pour une fenêtre `de -> à` exacte (le mois correspond à la granularité des données Wayback).
-- **Densité** - Rapide (3/an), Dense (12/an, défaut) ou Max (les plus récents jusqu'au plafond).
-- **Sélecteur de sous-domaines** - chaque sous-domaine trouvé dans l'archive, sélectionnable individuellement.
-- **Exclusion d'URL** - puces de mots-clés avec préréglages (blog, tag, catégorie, auteur, flux, ...).
-- Une **estimation en direct** du nombre de pages et du temps se met à jour au fil des réglages.
-
-Au lancement, les snapshots sélectionnés sont envoyés directement, sans second aller-retour CDX.
-
----
-
-## Sélection intelligente des snapshots
-
-Toutes les pages archivées n'ont pas la même valeur. WayTrace note chaque chemin d'URL :
-
-| Note | Chemins | Pourquoi |
-|------|---------|----------|
-| **HAUTE (3)** | `/contact`, `/about`, `/team`, `/staff`, `/people`, `/careers`, `/login`, `/admin`, `/press`, `/investors`, `/security`, `/partners`, `/privacy`, `/terms`, `/legal`, `/imprint`, `/blog` | Où surgissent emails, noms, téléphones et endpoints internes |
-| **MOYENNE (2)** | Page d'accueil `/` | Suit l'évolution de la marque, du stack et de la propriété |
-| **BASSE (1)** | Tout le reste | Contenu général |
-
-**Déduplication de contenu.** CDX fournit une empreinte SHA-1 par snapshot ; les snapshots de même `chemin + empreinte` sont réduits à la première occurrence, évitant de scraper deux fois des pages identiques.
-
-**Répartition au prorata des années.** Les choix sont distribués sur les années archivées plutôt que concentrés sur la période la plus capturée, pour représenter tout l'historique d'un domaine.
-
-**Plafond adaptatif.** Le nombre maximum de pages évolue avec la taille du domaine. Sur le service hébergé, un plafond par scan (`HOSTED_SNAPSHOT_CEILING`, défaut 3000) borne les runs ; mettez-le à `0` sur une installation auto-hébergée pour scanner en entier.
-
----
-
-## Catégories d'extraction
-
-43 catégories, chaque résultat suivi avec `first_seen`, `last_seen` et `occurrences`.
-
-**Personnes et contact**
-`emails` · `phones` · `persons` · `social_profiles` · `pgp_keys`
-
-**Secrets et expositions**
-`api_keys` · `connection_strings` · `cloud_buckets` · `jwt_tokens` · `internal_ips` · `hidden_fields` · `directory_listings`
-
-**Infrastructure et hébergement**
-`subdomains` · `hosting` · `http_headers` · `status_pages` · `favicons` · `sitemaps_and_robots`
-
-**Technique et tracking**
-`technologies` · `analytics_trackers` · `analytics_ids` · `adsense_ids` · `verification_tags` · `captcha_providers` · `cookie_consent` · `auth_providers`
-
-**Identifiants et corrélation**
-`crypto_addresses` · `french_business_ids` · `github_repos` · `organizations` · `bug_bounty_programs` · `job_boards`
-
-**Structure et contenu**
-`endpoints` · `js_urls` · `iframe_sources` · `outgoing_links` · `linked_documents` · `rss_feeds` · `assets` · `html_comments` · `meta_info` · `html_titles` · `addresses`
-
-Quelques-unes à signaler :
-
-- **emails** - formes brutes et obscurcies, liens `mailto:` ; le bruit comme `noreply`, `example`, noms de fichiers d'assets et specifiers de modules JS est filtré.
-- **api_keys** - AWS, Google, Stripe, SendGrid, webhooks Slack, jetons GitHub, plus des motifs modernes à faible faux-positif (Supabase, DigitalOcean, Shopify, Linear, npm). Toujours traités comme une fuite.
-- **cloud_buckets** - URLs S3, GCS, Azure Blob, DigitalOcean Spaces, souvent du stockage public mal configuré.
-- **connection_strings** - MySQL, Postgres, Mongo, Redis, AMQP, MSSQL et plus ; identifiants masqués en sortie.
-- **subdomains** - hôtes dev / staging / api / interne encore référencés depuis d'anciennes pages bien après leur extinction.
-- **favicons** - icône par snapshot avec empreintes MD5/SHA-256, un vecteur de corrélation inter-domaines.
-- **analytics_trackers** - GA/GA4, GTM, Meta Pixel, Hotjar, Mixpanel et plus ; un même ID sur plusieurs domaines les relie à un seul propriétaire.
-
-Chaque résultat enregistre aussi la **page source** dont il provient, pour pivoter ensemble les entités co-occurrentes (un email et un téléphone sur la même page archivée).
-
----
-
-## Résultats et provenance
-
-WayTrace ne vous dit **pas** ce qui est « important » : il montre la preuve et vous laissez juger. Chaque résultat porte :
-
-| Champ | Ce qu'il vous dit |
-|-------|-------------------|
-| **vu de / à** | quand la valeur est apparue dans l'archive et quand elle était présente pour la dernière fois (ce qui est encore là vs disparu) |
-| **occurrences** | sur combien de pages archivées elle apparaît |
-| **page source** | la capture Wayback exacte d'où elle vient, vérifiable en un clic |
-
-Les catégories avec résultats remontent en premier ; le périmètre complet des 43 catégories (y compris les vides) reste visible pour la transparence, pour qu'un résultat propre se lise « on a cherché et rien trouvé », pas « on n'a pas cherché ».
-
----
-
-## Interface des résultats
-
-Le rapport est une page unique avec deux vues entre lesquelles vous basculez :
-
-- **Catégories (par défaut).** Un rail à gauche liste les 43 catégories : celles avec résultats d'abord (avec compteurs), puis les vides repliées mais présentes. Vous ouvrez **une catégorie à la fois** ; le panneau montre tous ses résultats (valeur, occurrences, vu de / à, et un lien vers la page source archivée) **et sa propre activité** en dessous : une voie par valeur montrant quand elle est apparue et a disparu, plus un flux de changements daté. « Tout afficher » déroule toutes les catégories trouvées d'un coup.
-- **Activité.** Cochez des catégories **et** des pivots précis (un sous-domaine, un tracker, un favicon, une personne...) pour composer une frise partagée : chacun devient une voie sur le même axe d'années (pivots mis en avant), pour lire d'un coup d'œil les recouvrements et les disparitions. L'axe couvre toujours exactement ce qui est affiché. Inclut la galerie d'évolution des favicons et un flux de changements global. Les pivots sont cherchables.
-
-Deux recherches en tête, bien distinctes : **filtrer les résultats extraits** (instantané, côté client) et **recherche plein-texte dans le contenu des pages archivées** (n'importe quel mot du HTML récupéré, avec extraits surlignés et lien vers la capture Wayback exacte). Chaque valeur est copiable (par valeur ou par colonne entière), et vous pouvez **exporter** en JSON, CSV ou rapport HTML autonome.
-
-WayTrace ne classe pas les résultats par « importance » : chaque résultat porte sa **provenance** (vu de / à, occurrences, source archivée) et c'est vous qui jugez. Chaque catégorie est affichée, y compris celles à **zéro résultat**, pour que vous voyiez toujours l'étendue complète de ce qui a été cherché, pas seulement de ce qui a été trouvé.
-
----
-
-## Partage et flux public
-
-Un scan terminé est adressé par un `url_id` de 24 caractères (un jeton de capacité). Vous pouvez le garder privé ou le publier dans le flux public. Les scans partagés sont consultables par toute personne ayant le lien et exportables en JSON, CSV ou rapport HTML autonome. L'instance hébergée sur [waytrace.org](https://waytrace.org) fonctionne en mode authentifié pour lancer des scans ; une installation auto-hébergée peut tourner totalement ouverte.
-
----
+- [Licence](#licence)
 
 ## Démarrage rapide
 
@@ -229,7 +45,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Ouvrez **http://localhost:8000**.
+Ouvrez **http://localhost:8000**. Le fichier compose par défaut n'écoute que sur `127.0.0.1` ; placez un reverse proxy devant pour l'exposer.
 
 ### Docker (développement, rechargement à chaud)
 
@@ -238,7 +54,7 @@ cp .env.example .env
 docker compose -f docker-compose.dev.yml up
 ```
 
-### Manuel
+### Sans Docker
 
 ```bash
 cd backend
@@ -248,17 +64,191 @@ cp ../.env.example ../.env
 uvicorn main:app --reload
 ```
 
-Ouvrez **http://localhost:8000**.
+Ouvrez **http://localhost:8000**. La base de données est par défaut `waytrace.db` à la racine du projet ; rien d'autre à configurer.
 
----
+## Fonctionnement
 
-## Référence API
+Un scan est un pipeline en quatre phases. Seules les phases 3 et 4 sollicitent archive.org pour du contenu ; la phase 1 est une seule requête d'index et la phase 2 est un calcul purement local.
 
-Docs Swagger interactives sur **http://localhost:8000/docs**.
+```
+  domaine
+    │
+    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  1 · Index (CDX)                                                     │
+│  Interroger l'API CDX d'archive.org : chaque URL HTML archivée      │
+│  Garder text/html + statut 200, paginé ; cache gzip dans data/cdx/  │
+│  → jusqu'à des dizaines de milliers d'enregistrements (date+digest) │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  2 · Sélection                                                      │
+│  Noter chaque chemin d'URL par valeur OSINT (haute / moyenne / basse)│
+│  Écarter les captures identiques par digest, garder la plus ancienne│
+│  Répartir les choix par année pour qu'aucune époque ne domine       │
+│  Plafonner le nombre selon la taille du domaine                     │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  3 · Téléchargement                                                 │
+│  Récupérer les captures choisies depuis la Wayback Machine          │
+│  Débit adaptatif + limite de concurrence partagée, recul sur refus  │
+│  Budget de temps : garder ce qui est téléchargé, jamais bloqué      │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  4 · Extraction                                                     │
+│  Parser avec selectolax (en C), lancer 43 extracteurs de catégorie  │
+│  (regex + DOM + JSON-LD), agréger first_seen / last_seen /          │
+│  occurrences, et estampiller chaque trouvaille de sa capture source │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               ▼
+              Résultats structurés avec une chronologie complète
+```
 
-### POST /api/scan/preflight
+## Le scan guidé
 
-Requête CDX légère ; renvoie les stats du domaine sans scraping.
+Rien n'est téléchargé à l'aveugle. Chaque scan commence par une étape de cadrage légère.
+
+**Le prévol** exécute la phase 1 seulement : une requête CDX, sans scraping. Il renvoie le nombre total de snapshots, les chemins uniques, la plage de dates archivées, et un explorateur de snapshots par chemin.
+
+**Le cadrage** permet de façonner le scan avant tout téléchargement :
+
+- un **histogramme des snapshots** dans le temps ; cliquez deux années pour borner une plage ;
+- un **calendrier au mois près** pour une fenêtre exacte `de → à` (le mois correspond à la granularité de Wayback) ;
+- la **densité** : Rapide (peu par an), Dense (par défaut) ou Max (autant que le plafond l'autorise) ;
+- un **sélecteur de sous-domaines** : chaque sous-domaine vu dans l'archive, sélectionnable individuellement ;
+- l'**exclusion par mot-clé** : des puces avec préréglages (blog, tag, category, author, feed…) ;
+- une **estimation en direct** des pages et du temps, qui se met à jour pendant que vous ajustez.
+
+Au lancement, les snapshots exacts que vous avez choisis sont envoyés directement à la phase 3, sans second aller-retour d'index.
+
+## Ce qui est extrait
+
+43 catégories. Chaque trouvaille suit `first_seen`, `last_seen` et `occurrences`, et retient la page archivée dont elle provient.
+
+**Personnes et contact**
+`emails` · `phones` · `persons` · `organizations` · `addresses` · `social_profiles`
+
+**Secrets et expositions**
+`api_keys` · `connection_strings` · `cloud_buckets` · `jwt_tokens` · `crypto_addresses` · `internal_ips` · `hidden_fields` · `directory_listings` · `pgp_keys`
+
+**Infrastructure et hébergement**
+`subdomains` · `hosting` · `http_headers` · `favicons` · `technologies` · `status_pages`
+
+**Traçage et identifiants**
+`analytics_trackers` · `analytics_ids` · `adsense_ids` · `verification_tags` · `cookie_consent` · `captcha_providers` · `auth_providers` · `github_repos` · `bug_bounty_programs` · `job_boards` · `french_business_ids`
+
+**Structure et contenu**
+`endpoints` · `js_urls` · `iframe_sources` · `outgoing_links` · `linked_documents` · `assets` · `sitemaps_and_robots` · `rss_feeds` · `html_comments` · `meta_info` · `html_titles`
+
+Quelques-unes valent d'être soulignées :
+
+- **api_keys** couvre AWS, Google, Stripe, SendGrid, webhooks Slack, jetons GitHub, et des motifs modernes à faible faux positif (Supabase, DigitalOcean, Shopify, Linear, npm). Toujours traité comme une fuite.
+- **cloud_buckets** repère les URL S3, GCS, Azure Blob et DigitalOcean Spaces, refuge habituel du stockage public mal configuré.
+- **connection_strings** reconnaît MySQL, Postgres, Mongo, Redis, AMQP, MSSQL et plus ; les identifiants sont masqués en sortie.
+- **subdomains** fait remonter les hôtes dev / staging / api / internes encore référencés par de vieilles pages longtemps après leur extinction.
+- **favicons** hache chaque icône (MD5 et SHA-256), un vecteur de corrélation entre domaines.
+- **analytics_trackers** capte GA/GA4, GTM, Meta Pixel, Hotjar, Mixpanel et d'autres ; un identifiant de traçage partagé entre domaines les relie à un même propriétaire.
+
+Comme chaque trouvaille retient sa **capture source**, les entités qui coexistent sur une même page archivée (un e-mail et un numéro, une personne et une adresse) peuvent être pivotées ensemble.
+
+### Sévérité
+
+Les trouvailles sont triées en quatre niveaux pour faire remonter le signal, sans rien cacher :
+
+| Niveau | Signification |
+|--------|---------------|
+| **LEAK** | Une exposition sensible réelle que le propriétaire n'avait pas l'intention de publier. |
+| **PIVOT** | Une piste à suivre ; elle mène à des entités liées. |
+| **CONTEXT** | Contexte utile pour comprendre la cible. |
+| **BACKGROUND** | Listé pour l'exhaustivité, jamais mis en avant. |
+
+## Trouvailles et provenance
+
+WayTrace ne vous dit pas ce qui est « important » et ne note pas les trouvailles à la sensation. Il montre les preuves et vous laisse juger. Chaque trouvaille porte :
+
+| Champ | Ce qu'il vous dit |
+|-------|-------------------|
+| **first seen / last seen** | quand la valeur est apparue dans l'archive, et quand elle y était présente pour la dernière fois (donc ce qui est vivant ou disparu) |
+| **occurrences** | sur combien de pages archivées elle est apparue |
+| **page source** | la capture Wayback exacte d'où elle vient, un clic pour vérifier |
+
+Les catégories qui ont trouvé quelque chose sont présentées en premier. Les catégories vides restent visibles aussi : un résultat propre se lit « on a cherché et rien trouvé », pas « on n'a pas cherché ».
+
+## Le rapport
+
+Le résultat est une page unique avec deux vues entre lesquelles vous basculez.
+
+**Catégories** (par défaut) est un rail de toutes les 43 catégories, celles avec trouvailles d'abord (avec compteurs), les vides présentes mais repliées. Vous ouvrez une catégorie à la fois ; son panneau montre les trouvailles (valeur, occurrences, first/last-seen, lien vers la capture source) et, en dessous, sa propre activité : une piste par valeur montrant quand elle est apparue et a disparu, plus un fil de changements daté. « Tout afficher » aplatit d'un coup toutes les catégories trouvées.
+
+**Activité** permet de cocher des catégories et des pivots individuels (un sous-domaine précis, un traceur, un favicon, une personne) pour composer une chronologie partagée sur un même axe d'années : chevauchements et disparitions se lisent d'un coup d'œil. Elle inclut la galerie d'évolution des favicons et un fil de changements global.
+
+Deux recherches en haut, volontairement distinctes : **filtrer les trouvailles extraites** (instantané, côté client) et **rechercher en plein texte dans le contenu archivé** (n'importe quel mot dans le HTML récupéré, avec extraits surlignés et lien vers la capture exacte). Chaque valeur est copiable, et vous pouvez **exporter** le scan entier en JSON, CSV, ou un rapport HTML autonome.
+
+Un scan terminé est adressé par un `url_id` de 24 caractères, un jeton de capacité : connaître le lien suffit pour le voir ou l'exporter. Les scans sont privés ; il n'y a ni flux public ni comptes. Sur une installation auto-hébergée, **Mes scans** liste chaque scan lancé par l'instance, avec son heure de début exacte et sa durée, pour garder tout votre historique en local.
+
+## Réglages (auto-hébergé)
+
+La version auto-hébergée embarque une page **Réglages** (dans la barre de navigation) qui transforme chaque paramètre de scan et d'archive.org en formulaire. C'est le panneau que vous éditeriez sinon dans `.env`, rendu vivant :
+
+- chaque réglage groupé par étape du pipeline (politesse archive.org, sélection des snapshots, scans et file, avancé), avec sa description, son unité et sa valeur recommandée ;
+- les changements ne s'appliquent qu'au clic sur le **Enregistrer** propre à chaque champ, donc rien n'est validé par accident ;
+- des zones de risque plutôt que des plafonds durs : une valeur peut aller partout où c'est techniquement valide, mais la zone orange est signalée agressive et la zone rouge prévient d'un risque réel qu'archive.org bloque votre IP ;
+- les quelques réglages qui exigent un redémarrage offrent un **Redémarrer maintenant** en un clic ;
+- la rétention des scans accepte une option infinie (∞), pour qu'une installation auto-hébergée puisse garder chaque scan indéfiniment.
+
+Sur le service hébergé ces limites restent verrouillées ; le panneau est une fonctionnalité d'auto-hébergement.
+
+## Configuration
+
+Les réglages vivent dans `.env` (copiez `.env.example`), et les variables inconnues sont ignorées : un reliquat d'une ancienne version ne bloque jamais le démarrage. Chaque valeur ci-dessous peut aussi être changée en direct depuis la page Réglages. Les valeurs par défaut sont volontairement polies envers archive.org ; augmenter la concurrence ou baisser les délais est ce qui fait limiter une IP.
+
+| Variable | Défaut | Description |
+|----------|--------|-------------|
+| `ARCHIVE_RATE_PER_MINUTE` | `75` | Débit de requêtes archive.org de **départ** (req/min) ; le gouverneur l'adapte en direct |
+| `ARCHIVE_RATE_MIN` / `ARCHIVE_RATE_MAX` | `60` / `80` | Plancher et plafond dans lesquels le débit adaptatif reste |
+| `ARCHIVE_GLOBAL_CONCURRENCY` | `3` | Connexions archive.org simultanées, tous scans confondus |
+| `MAX_CONCURRENT_SCRAPES` | `4` | Requêtes parallèles par scan (1 à 50) |
+| `SCRAPE_DELAY_MIN` / `SCRAPE_DELAY_MAX` | `0.5` / `1.2` | Délai aléatoire par requête (s) |
+| `MAX_ACTIVE_TOTAL` | `1` | Scans exécutés en même temps ; les autres patientent |
+| `MAX_QUEUE_TOTAL` | `100` | Plafond des scans en cours et en attente |
+| `MAX_ACTIVE_PER_IP` | `2` | Scans simultanés par IP cliente |
+| `ARCHIVE_REQUEST_TIMEOUT` | `60` | Délai maximal par requête (s) |
+| `HOSTED_SNAPSHOT_CEILING` | `3000` | Plafond de snapshots par scan ; `0` le retire, pour des scans auto-hébergés complets |
+| `SNAPSHOT_CAP_MULTIPLIER` | `1.0` | Multiplie le plafond adaptatif de snapshots avant le préréglage de profondeur |
+| `SCAN_RETENTION_DAYS` | `14` | Durée de conservation et de réutilisation d'un scan ; `0` les garde indéfiniment |
+| `DATABASE_URL` | `<repo>/waytrace.db` | Chemin SQLite ; les images Docker fixent `/data/waytrace.db` |
+| `LOG_LEVEL` | `INFO` | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
+| `EXPOSE_API_DOCS` | `0` | `1` sert la documentation interactive de l'API sur `/api/docs` |
+
+**Le gouverneur de débit.** archive.org ne publie aucune limite de scraping et sa tolérance évolue, donc WayTrace ne devine pas un nombre fixe. Un seau à jetons partagé démarre prudent, pousse le débit vers le haut tant que les réponses restent saines, et le divise par deux dès qu'archive.org refuse une connexion (AIMD, comme le contrôle de congestion TCP). Combiné au plafond de concurrence partagé et à un disjoncteur qui distingue un vrai blocage d'IP d'un simple bridage, cela garde l'IP du serveur hors de la liste de blocage d'archive.org quel que soit le nombre de scans ou d'utilisateurs. Voir `.env.example` pour l'ensemble complet.
+
+## API
+
+L'API HTTP est celle qu'utilise le frontend. La documentation interactive est servie sur `/api/docs` quand `EXPOSE_API_DOCS=1`.
+
+**Scan**
+
+- `POST /api/scan/preflight` : requête CDX seule ; renvoie les stats du domaine sans scraper.
+- `POST /api/scan` : lance un scan ; renvoie immédiatement un `job_id`. Accepte un `config` (profondeur, plage de dates, catégories, mots-clés exclus) ou une liste explicite `selected_snapshots` issue du prévol.
+- `GET /api/jobs/{job_id}` : interroge le statut et, à la fin, les résultats.
+- `GET /api/jobs/{job_id}/stream` : Server-Sent Events pour la progression en direct (`progress`, `complete`, `error`).
+
+**Scans**
+
+- `GET /api/s/{url_id}` : voir un scan stocké ; `DELETE` pour le supprimer.
+- `GET /api/s/{url_id}/search?q=…` : recherche plein texte dans le contenu archivé du scan.
+- `GET /api/s/{url_id}/export.{json,csv,html}` : télécharger le scan.
+- `GET /api/local-scans` : chaque scan lancé par l'instance (« Mes scans » en auto-hébergé).
+
+**Service**
+
+- `GET /api/health` : `{ "status": "ok", "version": "1.8.0", "uptime_seconds": …, "active_jobs": … }`
+- `GET /api/service-status` : profondeur de file, santé d'archive.org, décompte glissant des scans.
+- `GET /api/config`, `PUT /api/config`, `POST /api/config/reset`, `POST /api/config/restart` : le panneau Réglages (auto-hébergé uniquement).
+
+Exemple :
 
 ```bash
 curl -X POST http://localhost:8000/api/scan/preflight \
@@ -272,183 +262,75 @@ curl -X POST http://localhost:8000/api/scan/preflight \
   "total_snapshots": 47404,
   "html_snapshots": 12861,
   "unique_paths": 971,
-  "date_range": { "first": "2003-08", "last": "2026-01" },
-  "path_groups": [
-    { "path": "/", "score": 2, "count": 412, "snapshots": [ ... ] },
-    { "path": "/contact", "score": 3, "count": 89, "snapshots": [ ... ] }
-  ]
+  "date_range": { "first": "2003-08", "last": "2026-01" }
 }
 ```
-
-### POST /api/scan
-
-Crée un scan. Renvoie immédiatement un `job_id` ; suivez par polling ou flux. `config` est optionnel.
-
-```bash
-curl -X POST http://localhost:8000/api/scan \
-  -H "Content-Type: application/json" \
-  -d '{
-    "domain": "example.com",
-    "config": {
-      "depth": "standard",
-      "date_from": "2018-01",
-      "date_to": null,
-      "categories": ["emails", "subdomains", "api_keys", "phones"],
-      "exclude_keywords": ["tag", "category"]
-    }
-  }'
-```
-
-Passez `selected_snapshots` (depuis les `path_groups` du préflight) pour scraper exactement les pages choisies :
-
-```json
-{
-  "domain": "example.com",
-  "selected_snapshots": [
-    { "timestamp": "20210615120000", "url": "https://example.com/contact" }
-  ]
-}
-```
-
-### GET /api/jobs/{job_id}
-
-Suit le statut et récupère les résultats à la fin.
-
-```json
-{
-  "id": "3f8a2c1d-...",
-  "status": "completed",
-  "progress": 100,
-  "meta": {
-    "domain": "example.com",
-    "total_snapshots_found": 12861,
-    "snapshots_analyzed": 312,
-    "pages_scraped": 298,
-    "date_first_seen": "2003-08",
-    "date_last_seen": "2026-01"
-  },
-  "results": {
-    "highlights": [ { "severity": "LEAK", "category": "api_keys", "...": "..." } ],
-    "emails": [ { "value": "ceo@example.com", "first_seen": "2009-03", "last_seen": "2021-11", "occurrences": 14 } ],
-    "subdomains": [ "..." ]
-  }
-}
-```
-
-Progression du statut : `queued` -> `running` -> `completed` | `failed`.
-
-### GET /api/jobs/{job_id}/stream
-
-Server-Sent Events pour la progression en temps réel (préféré au polling). Événements : `progress`, `complete`, `error`, `expired` ; battement toutes les 15 s.
-
-### Scans partagés & stockage
-
-Chaque scan est stocké sous un `url_id` stable et reste disponible pendant la fenêtre de rétention (14 jours sur le build hébergé ; configurable en auto-hébergé) :
-
-- `GET /api/s/{url_id}` - consulter un scan ; `DELETE` pour le supprimer ; `POST /api/s/{url_id}/publish` pour basculer public.
-- `GET /api/s/{url_id}/search?q=…` - recherche plein-texte dans le contenu des pages archivées du scan.
-- `GET /api/s/{url_id}/export.{json,csv,html}` - télécharger.
-- `GET /api/feed` - scans récemment publiés.
-- `GET /api/local-scans` - **auto-hébergé uniquement** : liste tous les scans lancés par cette instance (publiés ou privés), pour qu'un utilisateur solo conserve et réaccède à tous ses scans depuis « Mes scans ». Désactivé sur le build hébergé, qui rattache les scans aux comptes.
-
-### GET /api/health
-
-```json
-{ "status": "ok", "version": "1.6.0", "uptime_seconds": 3842, "active_jobs": 1 }
-```
-
----
-
-## Configuration
-
-Tous les réglages sont dans `.env` (copié depuis `.env.example`). Les valeurs par défaut sont polies envers archive.org ; augmenter la concurrence ou baisser les délais entraîne un rate-limit.
-
-| Variable | Défaut | Description |
-|----------|--------|-------------|
-| `ARCHIVE_RATE_PER_MINUTE` | `75` | Débit **de départ** des requêtes archive.org (req/min). Le gouverneur l'adapte en direct. |
-| `ARCHIVE_RATE_MIN` / `ARCHIVE_RATE_MAX` | `60` / `80` | Plancher et plafond dans lesquels le débit adaptatif reste (1 → 1,33 req/s) |
-| `ARCHIVE_GLOBAL_CONCURRENCY` | `3` | Connexions archive.org simultanées max, tous scans confondus |
-| `MAX_CONCURRENT_SCRAPES` | `4` | Requêtes parallèles par scan (1-50) |
-| `SCRAPE_DELAY_MIN` / `SCRAPE_DELAY_MAX` | `0.5` / `1.2` | Gigue par requête (s) |
-| `MAX_ACTIVE_TOTAL` | `1` | Scans exécutés en même temps ; le reste attend en file |
-| `MAX_QUEUE_TOTAL` | `15` | Profondeur de la file d'attente (actifs + en attente) |
-| `MAX_ACTIVE_PER_IP` | `1` | Scans en cours par client (impossible d'en empiler un 2ᵉ) |
-| `ARCHIVE_REQUEST_TIMEOUT` | `60` | Délai par requête (s) |
-| `HOSTED_SNAPSHOT_CEILING` | `3000` | Plafond de snapshots par scan ; `0` le désactive pour des scans **complets** auto-hébergés |
-| `SCAN_RETENTION_DAYS` | `14` | Durée de conservation d’un scan (et de réutilisation par le garde-fou) |
-| `IS_PRODUCTION` | `0` | `1` en prod : refuse de démarrer avec le `SECRET_KEY` par défaut |
-| `DATABASE_URL` | `/data/waytrace.db` | Chemin SQLite (à surcharger hors Docker) |
-| `LOG_LEVEL` | `INFO` | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
-
-**À propos du gouverneur de débit.** archive.org ne publie aucune limite de scraping et sa tolérance est dynamique, donc WayTrace ne devine pas un chiffre fixe : il démarre prudemment, pousse le débit vers le haut tant que les réponses restent propres, et *le divise par deux dès qu'archive.org refuse une connexion* (AIMD, comme le contrôle de congestion TCP). Cela garde l'IP du serveur hors de la liste de blocage d'archive.org quel que soit le nombre de scans ou d'utilisateurs simultanés. Relever les plafonds accélère les scans à vos risques. Voir `.env.example` pour l'ensemble.
-
----
 
 ## Architecture
 
 ```
 backend/
-  main.py                 App FastAPI, middleware, lifespan (nettoyage TTL)
-  config.py               Réglages Pydantic depuis .env
-  models.py               Schémas requête/réponse (Pydantic v2)
-  db.py                   SQLite (aiosqlite) - scans + index FTS5 du contenu des pages
-  store.py                Index de jobs en mémoire + file équitable (progression)
+  main.py             app FastAPI, middleware, cycle de vie (reprise de file, purge)
+  config.py           réglages Pydantic depuis .env (variables inconnues ignorées)
+  models.py           schémas requête/réponse (Pydantic v2)
+  db.py               SQLite (aiosqlite) : scans + index FTS5 du contenu de page
+  store.py            index mémoire des jobs + file équitable à l'épreuve du redémarrage
   routers/
-    scan.py               POST /scan, POST /scan/preflight, GET /jobs/{id}, SSE
-    public.py             Scans partagés (/api/s/{url_id}), recherche, exports, flux
-    health.py             GET /health, GET /archive-status, GET /stats
+    scan.py           /scan, /scan/preflight, /jobs/{id}, flux SSE
+    public.py         scans stockés (/s/{url_id}), recherche, exports, mes scans
+    health.py         /health, /service-status, /stats
+    selfhost_config.py  l'API du panneau Réglages (/config)
   services/
-    cdx.py                Client CDX, HTML uniquement, paginé, cache gzip
-    filters.py            Sélection des snapshots, notation des chemins, dédup, densité
-    scraper.py            Téléchargeur Wayback concurrent, budget, recul
-    archive_rate.py       Gouverneur de débit (AIMD) + concurrence partagé
-    archive_health.py     Disjoncteur : détection throttling + blocage d'IP dur
-    extractor/            Un module par catégorie (43 au total) + finalize/highlights
+    cdx.py            client CDX, HTML seul, paginé, cache gzip
+    filters.py        sélection des snapshots : score de chemin, dédup, densité
+    scraper.py        téléchargeur Wayback concurrent, budget de temps, recul
+    archive_rate.py   gouverneur adaptatif (AIMD) de débit + concurrence, partagé
+    archive_health.py disjoncteur : bridage vs détection de vrai blocage d'IP
+    runtime_config.py registre des réglages modifiables derrière le panneau Réglages
+    extractor/        un module par catégorie (43) + finalize + highlights
 
-frontend/                 index.html + styles.css + app.js - JS vanilla, sans build,
-                          clair/sombre, bilingue FR/EN, rapport à deux vues
-tests/                    1200+ tests : extraction, sélection, API, anti-blocage, régressions
+frontend/             index.html + styles.css + app.js : JS vanilla, sans étape de
+                      build, thèmes sombre/clair, bilingue EN/FR, rapport à deux vues
+tests/                ~1250 tests sur ~80 fichiers : extraction, sélection,
+                      API, anti-blocage, régressions
 ```
 
 **Stack :** Python 3.12+, FastAPI, aiohttp, selectolax, Pydantic v2, aiosqlite, loguru.
 
-**Notes de conception :**
+Choix de conception à connaître :
 
-- **selectolax** plutôt que BeautifulSoup - en C, ~10x plus rapide en parsing volumineux.
-- **Tout en asynchrone** - aiohttp pour toutes les E/S réseau, aucun appel bloquant.
-- **Filtrage CDX côté serveur** - demande seulement `text/html` + `status:200`, jamais des milliers d'assets.
-- **Gouverneur de débit adaptatif, sûr pour l'IP** - un token bucket partagé dont le débit s'auto-ajuste (AIMD) sur chaque appel archive.org, plus un plafond de concurrence partagé et un disjoncteur qui distingue un blocage d'IP dur d'un throttling ordinaire. Garde l'IP du serveur hors de la liste de blocage sous n'importe quelle charge.
-- **Budget temps de scraping** - un archive.org lent ne bloque jamais un scan ; les pages téléchargées sont conservées et analysées même si des traînards sont abandonnés.
-- **Provenance par résultat** - chaque entité est marquée de sa page source pour les pivots de co-occurrence.
-
----
+- **selectolax** plutôt que BeautifulSoup : un parseur en C, environ dix fois plus rapide sur du HTML en volume.
+- **Asynchrone partout** : aiohttp pour toutes les E/S réseau, aucun appel bloquant.
+- **Filtrage CDX côté serveur** : ne demander que `text/html` et `status:200`, jamais des milliers de lignes d'assets.
+- **Un seul gouverneur de débit sûr pour l'IP** : un unique seau à jetons partagé et auto-réglé sur chaque appel archive.org, plus un plafond de concurrence partagé et un disjoncteur, pour qu'aucune charge ne mette l'IP sur la liste de blocage.
+- **Un budget de temps de scraping** : un archive.org lent ne bloque jamais un scan ; les pages téléchargées sont gardées et analysées même si des traînards sont abandonnés.
+- **Une file à l'épreuve du redémarrage** : les scans en file ou en cours survivent à un redémarrage et se remettent en file sous le même lien.
+- **Provenance par trouvaille** : chaque entité est estampillée de sa capture source pour les pivots de coexistence.
 
 ## Tests
 
 ```bash
 cd backend
-python -m pytest tests/ -q                      # suite complète
-python -m pytest tests/test_extractor.py -q     # motifs d'extraction de base
-python -m pytest tests/test_filters.py -q       # sélection des snapshots
-python -m pytest tests/test_api.py -q           # endpoints API
+python -m pytest tests/ -q                    # suite complète
+python -m pytest tests/test_extractor.py -q   # motifs d'extraction
+python -m pytest tests/test_filters.py -q     # sélection des snapshots
+python -m pytest tests/test_api.py -q         # endpoints de l'API
 ```
 
-Chaque catégorie d'extraction fournit des tests dédiés positifs et faux-positifs (au moins cinq de chaque), en plus des tests de validation API, de cycle de vie des jobs, d'algorithme de sélection et d'intégration de bout en bout.
-
----
+Chaque catégorie d'extraction embarque des tests positifs et de faux positifs dédiés (au moins cinq de chaque), aux côtés de tests de validation d'API, de cycle de vie des jobs, d'algorithme de sélection et de bout en bout. La CI exécute la suite complète sur Python 3.12.
 
 ## Légal et éthique
 
-WayTrace interroge **uniquement des archives publiques** de la Wayback Machine (archive.org). Il n'effectue aucun scan actif, scan de ports, brute-force, énumération DNS, ni aucune action intrusive contre les systèmes cibles.
+WayTrace lit **uniquement les archives publiques** de la Wayback Machine. Il ne fait aucun scan actif, aucun scan de port, aucun brute force, aucune énumération DNS, et n'envoie rien à la cible.
 
-- Destiné à la recherche légitime en sécurité, aux investigations OSINT, à la due diligence et à l'intelligence concurrentielle.
-- Ne l'utilisez pas pour du harcèlement, du pistage ou toute activité illégale.
-- Vous êtes seul responsable de l'usage des données extraites.
-- Respectez les [conditions d'archive.org](https://archive.org/about/terms.php) ; n'inondez pas de requêtes et ne tentez pas de contourner les limites.
+- Il est conçu pour la recherche en sécurité légitime, les enquêtes OSINT, la due diligence et l'intelligence économique.
+- Les pages archivées peuvent contenir des données personnelles ; il n'existe pas d'exemption générale pour les données personnelles publiques au titre du RGPD. Manipulez ce que vous trouvez de façon responsable, et signalez les risques aux personnes qui possèdent les données, jamais contre elles.
+- Vous êtes seul responsable de l'usage que vous faites des résultats.
+- Respectez les [conditions d'archive.org](https://archive.org/about/terms.php) ; n'inondez pas de requêtes et ne cherchez pas à contourner les limites.
 
 Signalements d'abus et demandes de retrait : [legal@waytrace.org](mailto:legal@waytrace.org).
 
----
+Voir [CONTRIBUTING.md](CONTRIBUTING.md) pour ajouter une catégorie d'extraction, et [CHANGELOG.md](CHANGELOG.md) pour l'historique des versions.
 
 ## Licence
 

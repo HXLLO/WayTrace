@@ -2694,6 +2694,8 @@
     .config-rec { font-size: 11.5px; color: var(--text-faint); }
     .config-badge { text-transform: none; }
     .config-reset, .config-save { font-size: 11.5px; }
+    /* .btn sets display:inline-flex, which would otherwise defeat [hidden]. */
+    .config-save[hidden], .config-reset[hidden] { display: none; }
     .config-inf {
       font-size: 13px; line-height: 1; padding: 4px 8px; min-width: 0;
       color: var(--text-dim); border: 1px solid var(--border); background: transparent;
@@ -2703,7 +2705,9 @@
     .config-row.dirty { }
     .config-row.dirty .config-key { color: var(--accent); }
     .config-row input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
-    .config-restart-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    /* :not([hidden]) so the hidden attribute still wins; a bare display:flex
+       would override [hidden]{display:none} and show an empty bar. */
+    .config-restart-bar:not([hidden]) { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     @media (max-width: 640px) {
       .config-row { flex-direction: column; align-items: stretch; }
       .config-ctl { align-items: flex-start; }

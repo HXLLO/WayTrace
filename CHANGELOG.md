@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.8.0
+
+- **Rewritten documentation.** The README (English and French) has been rebuilt from scratch to match the software as it is today: 43 extraction categories, the real API surface, the self-hosted Settings panel, no accounts, and corrected defaults throughout. This release marks the 1.8 line, gathering everything since 1.7.2 into one coherent version.
+- **Fully bilingual interface.** Around 55 interface strings that still showed in English regardless of the chosen language, notifications, confirmations, the 404 page, the export drawer and the guided-scan intro, are now translated in both English and French.
+
 ## v1.7.9
 
 - **Upgrades don't break on an old `.env`.** WayTrace now ignores unknown settings in your `.env` instead of refusing to start, so a variable left over from a previous release never blocks a boot.

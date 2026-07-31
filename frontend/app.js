@@ -444,6 +444,54 @@ const I18N = {
   fr: {
     'nav.history': 'Historique',
     'nav.settings': 'Réglages',
+    // --- account menu, 404, export drawer, scope intro (added i18n pass) ---
+    'menu.myscans': 'Mes scans',
+    'menu.appearance': 'Apparence',
+    'menu.admin': 'Panneau admin',
+    'menu.signout': 'Se déconnecter',
+    'notfound.title': 'Page introuvable',
+    'notfound.sub': "Cette page n'existe pas ou a été déplacée.",
+    'exp.format': 'Format',
+    'exp.filters': 'Filtres actifs',
+    'exp.nofilters': 'Aucun filtre actif',
+    'Markdown': 'Markdown', 'JSON': 'JSON', 'CSV': 'CSV', 'pages': 'pages',
+    'Timeline &amp; density': 'Chronologie et densité',
+    'scope.intro': "WayTrace ne lit que ce que la <b>Wayback Machine</b> a déjà archivé pour ce domaine. archive.org est limité en débit, donc un scan échantillonne un ensemble représentatif de snapshots plutôt que chaque capture. Réglez le scan ci-dessous, puis lancez : <b>1</b> choisir les sous-domaines, <b>2</b> écarter les pages bruyantes, <b>3</b> régler la plage de dates et la densité. Une sélection plus large veut dire un scan plus long.",
+    'scope.intro.cap': "Sur le service hébergé, un scan est plafonné à <b id=\"scope-intro-cap\"></b> snapshots.",
+    // --- toasts / confirms / errors that were hardcoded in JS ---
+    'Copy failed': 'Échec de la copie',
+    'Copy failed. URL: ': 'Échec de la copie. URL : ',
+    'Copied': 'Copié',
+    'Press Ctrl/Cmd-C to copy': 'Appuyez sur Ctrl/Cmd-C pour copier',
+    'Scan deleted': 'Scan supprimé',
+    'Deleted': 'Supprimé',
+    'Secret copied': 'Secret copié',
+    'URI copied': 'URI copiée',
+    'Type a domain first.': "Saisissez d'abord un domaine.",
+    'Create an account to run a scan.': 'Créez un compte pour lancer un scan.',
+    'Error: ': 'Erreur : ',
+    'Failed: ': 'Échec : ',
+    'Network error: ': 'Erreur réseau : ',
+    'No screenshot': 'Aucune capture',
+    'Cancel this scan?': 'Annuler ce scan ?',
+    'Delete this scan permanently?': 'Supprimer définitivement ce scan ?',
+    // auth
+    'Enter a valid email first.': "Saisissez d'abord un e-mail valide.",
+    'Network error. Try again.': 'Erreur réseau. Réessayez.',
+    'Password must be at least 8 characters.': 'Le mot de passe doit faire au moins 8 caractères.',
+    'Please complete the verification and try again.': 'Complétez la vérification et réessayez.',
+    // admin (hosted)
+    '2FA enabled': 'A2F activée',
+    'Account deleted': 'Compte supprimé',
+    'Ban failed: ': 'Échec du bannissement : ',
+    'Ban removed': 'Bannissement retiré',
+    'Enter a value to ban': 'Saisissez une valeur à bannir',
+    'Error: could not set maintenance (': 'Erreur : impossible de régler la maintenance (',
+    'Signed out.': 'Déconnecté.',
+    'Status updated': 'Statut mis à jour',
+    'Update failed': 'Échec de la mise à jour',
+    'Delete account ': 'Supprimer définitivement le compte ',
+    'Delete bug report #': 'Supprimer le rapport de bug #',
     'themes.title': 'Apparence',
     'themes.sub': "Choisissez un thème, ou composez le vôtre. Chaque thème a un visage sombre et un visage clair; le bouton Light/Dark de la barre de navigation bascule entre les deux. Votre choix est enregistré dans ce navigateur.",
     'themes.subacct': "Connecté, votre thème est enregistré sur votre compte et vous suit sur tous vos appareils.",
@@ -528,7 +576,7 @@ const I18N = {
     'home.adv.hint': "Les sous-domaines et la densité des snapshots se choisissent à l'étape suivante, une fois archive.org interrogé pour ce domaine.",
     'home.hint': 'Appuyez sur <kbd>Entrée</kbd> pour choisir les sous-domaines, les dates et la densité avant de lancer.',
     'home.caption': 'Données publiques uniquement &middot; <a href="#/legal">Mentions légales</a>',
-    'home.version': 'WayTrace v1.7.9 &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">thèmes</a>',
+    'home.version': 'WayTrace v1.8.0 &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">thèmes</a>',
     'home.archivedby': 'Archives par',
     'Pages read from': 'Pages lues depuis',
     'Querying archive.org': 'Interrogation archive.org',
@@ -1186,7 +1234,7 @@ function goToAdvancedScope() {
             || '').trim().toLowerCase()
     .replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '');
   if (!raw) {
-    showToast('Type a domain first.');
+    showToast(t('Type a domain first.'));
     document.querySelector('.home-search-input')?.focus();
     return;
   }
@@ -1205,7 +1253,7 @@ function startAdvancedScan() {
             || '').trim().toLowerCase()
     .replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '');
   if (!raw) {
-    showToast('Type a domain first.');
+    showToast(t('Type a domain first.'));
     document.querySelector('.home-search-input')?.focus();
     return;
   }
@@ -1691,11 +1739,11 @@ function wireCopyButtons() {
       const v = btn.getAttribute('data-copy');
       try {
         await navigator.clipboard.writeText(v);
-        flashMsg('Copied');
+        flashMsg(t('Copied'));
         btn.textContent = '✓';
         setTimeout(() => { btn.textContent = '⧉'; }, 1200);
       } catch (_) {
-        flashMsg('Copy failed');
+        flashMsg(t('Copy failed'));
       }
     });
   });
@@ -1755,7 +1803,7 @@ function renderPublicScanExpired() {
 
 async function cancelPublicScan() {
   if (!publicScanUrlId) return;
-  if (!confirm('Cancel this scan?')) return;
+  if (!confirm(t('Cancel this scan?'))) return;
   await fetch(API + '/api/s/' + encodeURIComponent(publicScanUrlId), {method: 'DELETE'});
   location.hash = '#/';
 }
@@ -1922,7 +1970,7 @@ async function startScan() {
     .replace(/^[a-z][a-z0-9+.-]*:\/\//, '')
     .split('/')[0].split('?')[0].split('#')[0].split(':')[0]
     .replace(/^www\./, '');
-  if (!raw) { showToast('Type a domain first.'); return; }
+  if (!raw) { showToast(t('Type a domain first.')); return; }
   location.hash = '#/scope/' + encodeURIComponent(raw);
 }
 
@@ -1968,7 +2016,7 @@ async function loadScope(domain) {
   // static element, so a disabled state left over from a previous successful
   // launch would otherwise persist and make the button inert on the next scan.
   $('scope-launch-btn').disabled = false;
-  $('scope-sub').textContent = 'Tune the scan before launching it.';
+  $('scope-sub').textContent = t('Tune the scan before launching it.');
   { const c = $('scope-intro-cap'); if (c) c.textContent = SCOPE_CAP.toLocaleString(); }
   { const intro = document.querySelector('.scope-intro'); if (intro) intro.style.display = ''; }
   $('scope-loading').style.display = '';
@@ -3789,7 +3837,7 @@ async function copyExport() {
     await navigator.clipboard.writeText(text);
     showToast(`Copied ${data.length} findings (${exportFormat})`);
   } catch (e) {
-    showToast('Copy failed');
+    showToast(t('Copy failed'));
   }
 }
 
@@ -3833,7 +3881,7 @@ async function copyFindingValue(value, btn) {
       }, 1200);
     }
   } catch (e) {
-    showToast('Copy failed');
+    showToast(t('Copy failed'));
   }
 }
 
@@ -4104,12 +4152,12 @@ async function confirmDeleteMyScan(btn, ev) {
     const r = await fetch(API + '/api/s/' + encodeURIComponent(urlId), { method: 'DELETE' });
     if (!r.ok && r.status !== 404) {
       const d = await r.json().catch(() => ({}));
-      showToast('Error: ' + (d.detail || r.statusText));
+      showToast(t('Error: ') + (d.detail || r.statusText));
       return;
     }
     renderMyScans();
   } catch (e) {
-    showToast('Network error: ' + e.message);
+    showToast(t('Network error: ') + e.message);
   }
 }
 
