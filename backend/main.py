@@ -42,6 +42,10 @@ async def lifespan(app: FastAPI):
     from services import maintenance
     await maintenance.load_from_db()
 
+    # Self-host config panel overrides survive restarts too (app_state KV).
+    from services import runtime_config
+    await runtime_config.load_overrides()
+
     # Restart-proof queue: re-enqueue jobs that were queued/running when the
     # previous process died (same job_id/url_id, so links keep working).
     restored = await store.restore_pending_jobs()
@@ -164,6 +168,8 @@ async def security_headers(request, call_next):
 app.include_router(scan.router)
 app.include_router(health.router)
 app.include_router(public_router.router)
+from routers import selfhost_config as selfhost_config_router
+app.include_router(selfhost_config_router.router)
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 

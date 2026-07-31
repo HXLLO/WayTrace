@@ -2673,3 +2673,32 @@
     .themes-pick input[type="color"] { width: 44px; height: 30px; padding: 2px; border: 1px solid var(--border);
       border-radius: 6px; background: var(--surface2); cursor: pointer; }
     .themes-actions { display: flex; gap: 10px; }
+
+    /* Self-host configuration panel */
+    .config-group { margin-bottom: 18px; }
+    .config-rows { display: flex; flex-direction: column; }
+    .config-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px;
+      padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .config-row:last-child { border-bottom: none; }
+    .config-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .config-key { font-family: var(--mono); font-size: 12.5px; color: var(--text-bright); letter-spacing: .02em; }
+    .config-desc { font-size: 12.5px; color: var(--text-dim); line-height: 1.45; }
+    .config-warn { font-size: 12.5px; color: var(--red); }
+    .config-ctl { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex: none; }
+    .config-ctl-line { display: flex; align-items: center; gap: 8px; }
+    .config-num, .config-text, .config-select { font-family: var(--mono); font-size: 13px; color: var(--text);
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 6px 8px; }
+    .config-num { width: 96px; text-align: right; }
+    .config-text { width: 220px; }
+    .config-num:focus-visible, .config-text:focus-visible, .config-select:focus-visible {
+      outline: none; border-color: var(--accent); }
+    .config-unit { font-size: 12px; color: var(--text-faint); min-width: 3.2em; }
+    .config-rec { font-size: 11.5px; color: var(--text-faint); }
+    .config-badge { text-transform: none; }
+    .config-reset { font-size: 11.5px; }
+    .config-row input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
+    @media (max-width: 640px) {
+      .config-row { flex-direction: column; align-items: stretch; }
+      .config-ctl { align-items: flex-start; }
+    }

@@ -454,6 +454,51 @@ const I18N = {
     'themes.accent': 'Accent',
     'themes.accent2': 'Accent',
     'themes.reset': 'Revenir au thème par défaut',
+    'config.title': 'Configuration',
+    'config.sub': "Tous les réglages de scan et d'archive.org de cette installation, appliqués à chaud et enregistrés localement. La zone orange est agressive; la zone rouge comporte un risque réel qu'archive.org bloque votre IP. Votre machine, vos règles.",
+    'config.disabled': "Le panneau de configuration est désactivé sur cette instance.",
+    'config.restartnote': "Certains réglages modifiés ne prendront effet qu'après un redémarrage du serveur.",
+    'config.safe': 'Revenir aux valeurs sûres',
+    'Archive.org politeness': 'Politesse archive.org',
+    'Snapshot selection': 'Sélection des snapshots',
+    'Scans & queue': "Scans et file d'attente",
+    'Advanced': 'Avancé',
+    'recommended': 'recommandé',
+    'reset': 'réinitialiser',
+    'restart required': 'redémarrage requis',
+    'Real risk that archive.org blocks your IP.': "Risque réel qu'archive.org bloque votre IP.",
+    'Starting request rate of the adaptive governor.': 'Débit de requêtes de départ du gouverneur adaptatif.',
+    'Floor the adaptive rate never drops below.': 'Plancher sous lequel le débit adaptatif ne descend jamais.',
+    'Ceiling the adaptive rate may probe up to.': 'Plafond que le débit adaptatif peut atteindre.',
+    'Additive rate increase after a clean interval.': 'Hausse du débit après un intervalle sans erreur.',
+    'Seconds of clean responses before a rate bump.': 'Secondes de réponses saines avant une hausse de débit.',
+    'Multiplier applied to the rate on a refusal.': 'Multiplicateur appliqué au débit après un refus.',
+    'Token-bucket burst allowance.': 'Tolérance de rafale du seau à jetons.',
+    'Simultaneous archive.org connections, all scans combined.': 'Connexions archive.org simultanées, tous scans confondus.',
+    'Parallel downloads within a single scan.': "Téléchargements parallèles au sein d'un même scan.",
+    'Low bound of the per-request jitter delay.': 'Borne basse du délai aléatoire entre requêtes.',
+    'High bound of the per-request jitter delay.': 'Borne haute du délai aléatoire entre requêtes.',
+    'Timeout of a single archive.org request.': "Délai maximal d'une requête archive.org.",
+    'Retries on a failed CDX index request.': "Nouvelles tentatives après un échec d'index CDX.",
+    'Retries on a failed page download.': 'Nouvelles tentatives après un échec de téléchargement.',
+    'First pause after archive.org refuses connections.': 'Première pause quand archive.org refuse les connexions.',
+    'Ceiling of the escalating refusal pause.': "Plafond de la pause qui s'allonge à chaque refus.",
+    'Quiet gap that resets the refusal escalation.': "Accalmie qui remet l'escalade des refus à zéro.",
+    'Hard cap on snapshots per scan. 0 removes the cap and scans the domain in full.': 'Plafond dur de snapshots par scan. 0 retire le plafond et scanne le domaine en entier.',
+    'Scales the adaptive snapshot cap before depth presets. Above 1.0 scans fetch more pages and take longer.': 'Multiplie le plafond adaptatif de snapshots avant les préréglages de profondeur. Au-delà de 1.0, les scans récupèrent plus de pages et durent plus longtemps.',
+    'Scans running at the same time; the rest wait in queue.': 'Scans exécutés en même temps; les autres patientent en file.',
+    'Hard cap on running plus waiting scans.': 'Plafond dur des scans en cours et en attente.',
+    'In-flight scans allowed per client IP.': 'Scans simultanés autorisés par IP cliente.',
+    'Hard wall-clock limit of a single scan.': "Durée maximale d'un scan.",
+    'Download-phase budget; past it the scan analyzes what it already has. 0 disables the budget.': "Budget de la phase de téléchargement; au-delà, le scan analyse ce qu'il a déjà. 0 désactive le budget.",
+    'How long finished scans are kept and reused.': 'Durée de conservation et de réutilisation des scans terminés.',
+    'Pause between expired-scan cleanup passes.': 'Pause entre deux passes de nettoyage des scans expirés.',
+    'Domain whose scan is kept forever as the homepage example. Empty disables it.': "Domaine dont le scan sert d'exemple permanent sur l'accueil. Vide pour désactiver.",
+    'Trust Cloudflare headers for the client IP. Only behind Cloudflare.': "Faire confiance aux en-têtes Cloudflare pour l'IP cliente. Uniquement derrière Cloudflare.",
+    'Serve the interactive Swagger docs at /docs.': 'Servir la documentation interactive Swagger sur /docs.',
+    'Verbosity of the server logs.': 'Verbosité des journaux du serveur.',
+    'Comma-separated origins allowed to call the API.': "Origines autorisées à appeler l'API, séparées par des virgules.",
+    'Largest accepted request body.': "Taille maximale d'un corps de requête accepté.",
     'nav.signin': 'Connexion',
     'nav.scan': 'Analyser',
     'home.status.label': 'Statut du service',
@@ -475,7 +520,7 @@ const I18N = {
     'home.adv.hint': "Les sous-domaines et la densité des snapshots se choisissent à l'étape suivante, une fois archive.org interrogé pour ce domaine.",
     'home.hint': 'Appuyez sur <kbd>Entrée</kbd> pour choisir les sous-domaines, les dates et la densité avant de lancer.',
     'home.caption': 'Données publiques uniquement &middot; <a href="#/legal">Mentions légales</a>',
-    'home.version': 'WayTrace v1.7.3 &middot; hébergé &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">thèmes</a>',
+    'home.version': 'WayTrace v1.7.4 &middot; hébergé &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">thèmes</a>',
     'home.archivedby': 'Archives par',
     'Pages read from': 'Pages lues depuis',
     'Querying archive.org': 'Interrogation archive.org',
@@ -543,8 +588,7 @@ const I18N = {
     'Copied': 'Copié',
     'home.provenance': "Outil OSINT open source. La version hébergée limite le nombre de snapshots par scan ; auto-hébergez-la depuis GitHub pour analyser un domaine en entier.",
     'home.ethic': "Conçu pour les chercheurs en sécurité, les équipes, les journalistes et les professionnels curieux. Utilisez ce que vous trouvez de façon responsable : signalez les risques aux personnes qui possèdent les données, jamais contre elles.",
-    'home.example': "Voir un exemple de rapport",
-    'The example report is being prepared. Try again in a moment.': "L'exemple de rapport est en préparation. Réessayez dans un instant.",
+    'home.historybtn': 'Historique des scans',
     'home.mrp.all': 'Toutes les dates',
     'mrp.all': 'Tout',
     'mrp.12m': '12 derniers mois',
@@ -884,17 +928,146 @@ function initLang() {
   setLang(l);
 }
 
+/* ===== SELF-HOST CONFIG PANEL ===== */
+/* The panel edits live Settings through /api/config. Full re-render after each
+   change: the API is local, and it keeps overridden/risk states honest. */
+let _cfgData = null;
+
+function _cfgRiskLevel(spec, val) {
+  if (!spec.risk || typeof val !== 'number') return 'ok';
+  const above = spec.risk.direction === 'above';
+  if (above ? val > spec.risk.red : val < spec.risk.red) return 'down';
+  if (above ? val > spec.risk.orange : val < spec.risk.orange) return 'warn';
+  return 'ok';
+}
+
+function _cfgInput(s) {
+  const id = 'cfg-' + s.key;
+  if (s.type === 'bool') {
+    return `<input type="checkbox" id="${id}" ${s.value ? 'checked' : ''}>`;
+  }
+  if (s.type === 'choice') {
+    return `<select id="${id}" class="config-select">` +
+      s.choices.map(c => `<option value="${esc(c)}" ${c === s.value ? 'selected' : ''}>${esc(c)}</option>`).join('') +
+      `</select>`;
+  }
+  if (s.type === 'str') {
+    return `<input type="text" id="${id}" class="config-text" value="${esc(String(s.value))}">`;
+  }
+  const step = s.step != null ? s.step : (s.type === 'float' ? 0.1 : 1);
+  return `<input type="number" id="${id}" class="config-num" value="${s.value}"` +
+    ` min="${s.min}" max="${s.max}" step="${step}">`;
+}
+
+function _cfgRow(s) {
+  const risk = _cfgRiskLevel(s, s.value);
+  const badges = [];
+  if (s.restart) badges.push(`<span class="badge config-badge">${esc(t('restart required'))}</span>`);
+  if (s.overridden) badges.push(`<button class="btn btn-sm config-reset" data-key="${s.key}">${esc(t('reset'))}</button>`);
+  const rec = s.recommended != null && s.type !== 'bool'
+    ? `<small class="config-rec">${esc(t('recommended'))} ${esc(String(s.recommended))}${s.unit ? ' ' + esc(s.unit) : ''}</small>` : '';
+  const warn = risk === 'down'
+    ? `<small class="config-warn">${esc(t('Real risk that archive.org blocks your IP.'))}</small>` : '';
+  return `
+    <div class="config-row" data-key="${s.key}">
+      <div class="config-info">
+        <span class="config-key">${esc(s.key.toUpperCase())}</span>
+        <small class="config-desc">${esc(t(s.desc))}</small>
+        ${warn}
+      </div>
+      <div class="config-ctl">
+        <span class="config-ctl-line">
+          ${s.risk ? `<span class="hs-dot ${risk}"></span>` : ''}
+          ${_cfgInput(s)}
+          ${s.unit ? `<span class="config-unit">${esc(s.unit)}</span>` : ''}
+        </span>
+        ${rec}${badges.join('')}
+      </div>
+    </div>`;
+}
+
+async function renderConfigPage() {
+  const groupsEl = $('config-groups');
+  const disabledEl = $('config-disabled');
+  if (!groupsEl) return;
+  try {
+    const r = await fetch(API + '/api/config');
+    if (!r.ok) throw new Error();
+    _cfgData = await r.json();
+  } catch (_) {
+    groupsEl.innerHTML = '';
+    disabledEl.hidden = false;
+    return;
+  }
+  disabledEl.hidden = true;
+  groupsEl.innerHTML = _cfgData.groups.map(g => `
+    <section class="scope-card config-group">
+      <div class="scope-card-title">${esc(t(g.title))}</div>
+      <div class="config-rows">${g.settings.map(_cfgRow).join('')}</div>
+    </section>`).join('');
+  const flat = {};
+  _cfgData.groups.forEach(g => g.settings.forEach(s => { flat[s.key] = s; }));
+  groupsEl.querySelectorAll('input, select').forEach(el => {
+    el.addEventListener('change', () => {
+      const key = el.id.replace('cfg-', '');
+      const spec = flat[key];
+      let value;
+      if (spec.type === 'bool') value = el.checked;
+      else if (spec.type === 'int') value = parseInt(el.value, 10);
+      else if (spec.type === 'float') value = parseFloat(el.value);
+      else value = el.value;
+      if ((spec.type === 'int' || spec.type === 'float') && !isFinite(value)) { renderConfigPage(); return; }
+      _cfgSave({[key]: value});
+    });
+  });
+  groupsEl.querySelectorAll('.config-reset').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await fetch(API + '/api/config/reset', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({keys: [btn.dataset.key]}),
+      });
+      renderConfigPage();
+    });
+  });
+}
+
+async function _cfgSave(values) {
+  try {
+    const r = await fetch(API + '/api/config', {
+      method: 'PUT', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(values),
+    });
+    if (r.ok) {
+      const d = await r.json();
+      if (d.restart_required && d.restart_required.length) $('config-restart-note').hidden = false;
+    } else {
+      const d = await r.json().catch(() => ({}));
+      if (d.detail) alert(d.detail);
+    }
+  } catch (_) {}
+  renderConfigPage();
+}
+
+async function configSafeValues() {
+  if (!_cfgData) return;
+  const safe = {};
+  _cfgData.groups.forEach(g => g.settings.forEach(s => {
+    if (s.recommended != null && s.value !== s.recommended) safe[s.key] = s.recommended;
+  }));
+  if (Object.keys(safe).length) await _cfgSave(safe);
+}
+
 /* ===== ROUTER ===== */
 function navigate(hash) {
   const parts = (hash || '#/').replace('#/', '').split('/').filter(Boolean);
   // v2 public scan route: #/s/{url_id}
   let view = parts[0] === 's' ? 'scan-public' : (parts[0] || 'home');
-  const valid = new Set(['home', 'scope', 'history', 'scan-public', 'legal', 'themes']);
+  const valid = new Set(['home', 'scope', 'history', 'scan-public', 'legal', 'themes', 'config']);
   if (!valid.has(view)) view = 'notfound';
   // 'results' stays here (not in `valid`): the public flow reuses view-results,
   // so navigate() must still deactivate it when leaving, even though there is no
   // longer a /#/results route.
-  const views = ['home', 'scope', 'results', 'history', 'scan-public', 'legal', 'themes', 'admin', 'notfound'];
+  const views = ['home', 'scope', 'results', 'history', 'scan-public', 'legal', 'themes', 'config', 'admin', 'notfound'];
 
   views.forEach(v => {
     const el = $('view-' + v);
@@ -928,6 +1101,8 @@ function navigate(hash) {
     loadHistory();
   } else if (view === 'themes') {
     renderThemesPage();
+  } else if (view === 'config') {
+    renderConfigPage();
   }
 }
 
@@ -968,26 +1143,6 @@ function startAdvancedScan() {
   _pendingScopePrefill = null;
   _forceRescan = false;   // a fresh homepage scan honours the guardrail
   location.hash = '#/scope/' + encodeURIComponent(raw);
-}
-
-/* "See an example report": open the permanently-kept demo scan so a visitor
-   sees a full report before creating an account. Viewing by url_id is public,
-   so this works signed-out by design. */
-async function openExampleScan(btn) {
-  if (btn) btn.disabled = true;
-  try {
-    const resp = await fetch(API + '/api/example-scan');
-    if (!resp.ok) {
-      showToast(t('The example report is being prepared. Try again in a moment.'));
-      return;
-    }
-    const d = await resp.json();
-    if (d && d.url_id) location.hash = '#/s/' + encodeURIComponent(d.url_id);
-  } catch (_) {
-    showToast(t('The example report is being prepared. Try again in a moment.'));
-  } finally {
-    if (btn) btn.disabled = false;
-  }
 }
 
 /* ===== MONTH-RANGE PICKER (homepage date calendar) ===== */
@@ -1618,6 +1773,8 @@ async function cancelPublicScan() {
 let WEEK_COUNT_BASELINE = 0;
 
 function renderHomeStatus(svc, arc) {
+  const cfgLink = $('home-config-link');
+  if (cfgLink) cfgLink.hidden = !svc.config_panel;
   const el = $('home-status');
   const line = $('home-status-line');
   if (!el || !line) return;

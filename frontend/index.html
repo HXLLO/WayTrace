@@ -88,9 +88,9 @@
     <p class="home-hint" data-i18n-html="home.hint">
       Press <kbd>Enter</kbd> to choose subdomains, dates and density before launching.
     </p>
-    <button class="home-example-btn" type="button" onclick="openExampleScan(this)">
-      <svg class="home-example-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
-      <span data-i18n="home.example">See an example report</span>
+    <button class="home-example-btn" type="button" onclick="location.hash='#/history'">
+      <svg class="home-example-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span data-i18n="home.historybtn">Scan history</span>
     </button>
     <div class="home-status" id="home-status" hidden>
       <div class="hs-label" data-i18n="home.status.label">Service status</div>
@@ -98,7 +98,8 @@
     </div>
     <p class="home-wayback"><span data-i18n="home.archivedby">Data archived by</span> <a href="https://web.archive.org" target="_blank" rel="noopener"><img class="wb-logo" src="/icons/wayback.svg" alt="Wayback Machine"></a></p>
     <p class="home-caption" data-i18n-html="home.caption">Public data only &middot; <a href="#/legal">Legal &amp; licence</a></p>
-    <p class="home-version" data-i18n-html="home.version">WayTrace v1.7.3 &middot; hosted &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">themes</a></p>
+    <p class="home-version" data-i18n-html="home.version">WayTrace v1.7.4 &middot; hosted &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">themes</a></p>
+    <p class="home-version" id="home-config-link" hidden><a href="#/config">configuration</a></p>
     <p class="home-provenance" data-i18n="home.provenance">Open-source OSINT tool. The hosted build caps snapshots per scan; self-host it from GitHub to scan a domain in full.</p>
   </div>
 
@@ -250,6 +251,19 @@
     </div>
     <div class="themes-actions">
       <button class="btn" type="button" onclick="resetThemePref()" data-i18n="themes.reset">Reset to default</button>
+    </div>
+  </div>
+</div>
+
+<div id="view-config" class="view">
+  <div class="themes-page">
+    <h1 data-i18n="config.title">Configuration</h1>
+    <p class="themes-sub" data-i18n="config.sub">Every scan and archive.org setting of this install, applied live and saved locally. Values in the orange zone are aggressive; the red zone carries a real risk that archive.org blocks your IP. Your machine, your rules.</p>
+    <div id="config-disabled" class="scope-cap-note" hidden data-i18n="config.disabled">The configuration panel is disabled on this instance.</div>
+    <p class="scope-cap-note is-capped" id="config-restart-note" hidden data-i18n="config.restartnote">Some changed settings only take effect after a server restart.</p>
+    <div id="config-groups"></div>
+    <div class="themes-actions">
+      <button class="btn" type="button" onclick="configSafeValues()" data-i18n="config.safe">Back to safe values</button>
     </div>
   </div>
 </div>

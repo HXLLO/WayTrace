@@ -92,6 +92,7 @@ async def service_status():
             "notice": maintenance.notice() or None,
             "scans_7d": scans_7d,
             "retention_days": settings.scan_retention_days,
+            "config_panel": settings.config_panel_enabled,
         },
     }
 

@@ -81,6 +81,14 @@ def _get_global_sem() -> asyncio.Semaphore:
     return _global_sem
 
 
+def reset_global_semaphore() -> None:
+    """Drop the cached semaphore so the next acquisition rebuilds it with the
+    current archive_global_concurrency (self-host config panel hot apply).
+    In-flight scans keep the old one until their next acquisition."""
+    global _global_sem
+    _global_sem = None
+
+
 def _parse_retry_after(value: str | None) -> float | None:
     """Return seconds from a Retry-After header value (int seconds only)."""
     if not value:

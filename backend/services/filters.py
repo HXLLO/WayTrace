@@ -5,6 +5,8 @@ from urllib.parse import urlparse
 
 from loguru import logger
 
+from config import settings
+
 if TYPE_CHECKING:
     from models import ScanConfig
 
@@ -95,7 +97,9 @@ def _apply_depth_to_cap(cap: int, config: ScanConfig | None) -> int:
     if config is None:
         return cap
     preset = DEPTH_PRESETS.get(config.depth, DEPTH_PRESETS["standard"])
-    adjusted = int(cap * preset["cap_mult"])
+    # User-tunable quantity lever (self-host config panel); preset clamps win.
+    user_mult = max(0.0, float(settings.snapshot_cap_multiplier))
+    adjusted = int(cap * preset["cap_mult"] * user_mult)
     if "min_cap" in preset:
         adjusted = max(adjusted, preset["min_cap"])
     if "max_cap" in preset:

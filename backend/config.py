@@ -14,7 +14,7 @@ ENV_FILES = (_REPO_ROOT / ".env", Path(".env"))
 
 # Single source of truth for the tool version, surfaced in the API (/api/health,
 # OpenAPI) and injected into the frontend footer.
-APP_VERSION = "1.7.3"
+APP_VERSION = "1.7.4"
 
 # Shared User-Agent for every archive.org request (CDX collector, page scraper,
 # favicon fetcher). One polite identity so the Internet Archive can attribute
@@ -80,6 +80,10 @@ class Settings(BaseSettings):
     # (year-proportional). Set to 0 to disable the ceiling entirely — that's the
     # mode for a self-hosted / local install, which can scan a domain in full.
     hosted_snapshot_ceiling: int = 3000
+    # Scales the adaptive snapshot cap (services/filters.py) before the depth
+    # preset clamps apply. 1.0 = tuned defaults; raising it fetches more
+    # snapshots per scan (longer scans, preset max caps still win).
+    snapshot_cap_multiplier: float = 1.0
     # Scans are kept (and thus reused by the already-scanned guardrail) for this
     # long. 14 days = a domain isn't re-scanned within two weeks.
     scan_retention_days: int = 14
@@ -89,6 +93,11 @@ class Settings(BaseSettings):
     # returns its url_id, so the homepage "See an example" button always opens
     # a real report. Empty string disables the feature.
     example_scan_domain: str = "xss.is"
+
+    # Self-host configuration panel (#/config + /api/config): edit the scan and
+    # archive.org politeness settings from the UI, persisted in app_state.
+    # Enabled on a self-hosted install; your machine, your rules.
+    config_panel_enabled: bool = True
 
     # Security: hide OpenAPI schema + Swagger UI by default in prod.
     # Set EXPOSE_API_DOCS=1 in dev/local for interactive exploration.

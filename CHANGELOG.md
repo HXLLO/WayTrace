@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.7.4
+
+- **A configuration panel for self-hosters.** New Configuration page (linked from the homepage footer): every scan and archive.org setting of your install, editable from the UI and applied live, no restart, no `.env` editing. Settings are grouped by pipeline stage (archive.org politeness, snapshot selection, scans and queue, advanced), each with its description, unit and recommended value. Changes persist in the local database and survive restarts; every setting has a reset, plus a global "back to safe values" button. Nothing is capped beyond technical validity, but each sensitive setting shows a risk zone: orange is aggressive, red carries a real chance archive.org blocks your IP. Your machine, your rules. The hosted service keeps its limits locked.
+- **A new quantity lever.** `SNAPSHOT_CAP_MULTIPLIER` scales how many snapshots a scan selects, on top of the depth presets.
+- **The hero button now opens your scan history** instead of the example report.
+
 ## v1.7.3
 
 - **The homepage shows the service breathing.** The latest-scans feed in the hero gives way to a live status panel: service state, scans running right now, queue depth, and how many scans ran over the last seven days.
