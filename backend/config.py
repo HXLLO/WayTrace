@@ -14,7 +14,7 @@ ENV_FILES = (_REPO_ROOT / ".env", Path(".env"))
 
 # Single source of truth for the tool version, surfaced in the API (/api/health,
 # OpenAPI) and injected into the frontend footer.
-APP_VERSION = "1.7.4"
+APP_VERSION = "1.7.5"
 
 # Shared User-Agent for every archive.org request (CDX collector, page scraper,
 # favicon fetcher). One polite identity so the Internet Archive can attribute

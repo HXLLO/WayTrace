@@ -15,17 +15,13 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
 from loguru import logger
-from pydantic import BaseModel, Field
-
 from config import settings
 from db import (
     delete_job,
     find_recent_scan_for_domain,
     get_job_by_url_id,
     search_scan_pages,
-    list_feed,
     list_recent_scans,
-    set_published,
 )
 from services.html_export import build_standalone_html
 from store import store
@@ -33,14 +29,6 @@ from store import store
 
 router = APIRouter(prefix="/api", tags=["public"])
 
-
-class PublishRequest(BaseModel):
-    published: bool = True
-
-
-class FeedResponse(BaseModel):
-    items: list[dict] = Field(default_factory=list)
-    count: int = 0
 
 
 def _is_expired(iso_str: str | None) -> bool:
@@ -116,25 +104,6 @@ def _owner_ok(job: dict | None, user: dict | None) -> bool:
     return bool(user) and user.get("id") == owner
 
 
-@router.post("/s/{url_id}/publish")
-async def publish_scan(url_id: str, body: PublishRequest, request: Request):
-    """Toggle the scan's appearance in the public feed. The url_id is the
-    capability token."""
-    user = None
-    persisted = await get_job_by_url_id(url_id)
-    if persisted is None:
-        raise HTTPException(status_code=404, detail="Scan not found")
-    if _is_expired(persisted.get("expires_at")):
-        raise HTTPException(status_code=410, detail="Scan expired")
-    if not _owner_ok(persisted, user):
-        raise HTTPException(status_code=403, detail="This scan belongs to another account.")
-    ok = await set_published(url_id, bool(body.published))
-    if not ok:
-        raise HTTPException(status_code=404, detail="Scan not found")
-    logger.info("Scan {} publish={}", url_id, body.published)
-    return {"url_id": url_id, "published": bool(body.published)}
-
-
 @router.delete("/s/{url_id}")
 async def delete_scan(url_id: str, request: Request):
     """Permanently delete a scan: cancel it if still running, hard-delete the
@@ -168,15 +137,6 @@ async def search_scan(url_id: str, q: str = "", limit: int = 50):
         raise HTTPException(status_code=410, detail="Scan expired")
     results = await search_scan_pages(url_id, q, limit=limit)
     return {"query": q, "count": len(results), "results": results}
-
-
-@router.get("/feed", response_model=FeedResponse)
-async def get_feed(limit: int = 20, offset: int = 0):
-    """Return the N most recently published, non-expired scans."""
-    limit = max(1, min(limit, 100))
-    offset = max(0, offset)
-    items = await list_feed(limit=limit, offset=offset)
-    return FeedResponse(items=items, count=len(items))
 
 
 @router.get("/example-scan")

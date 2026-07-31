@@ -583,61 +583,6 @@ async def find_recent_scan_for_domain(domain: str, user_id=None) -> dict | None:
         await db.close()
 
 
-async def list_feed(limit: int = 20, offset: int = 0) -> list[dict]:
-    """Return published, non-expired jobs sorted by published_at DESC."""
-    db = await get_db()
-    try:
-        now = _iso(datetime.now(timezone.utc))
-        # One row per domain (the most recently published), so re-scanning a
-        # domain never shows it twice in the feed. Keep row j only if no other
-        # published, non-expired row for the same domain is newer, tie-broken by
-        # rowid so two scans published in the same second still resolve to one.
-        cur = await db.execute(
-            """SELECT j.url_id, j.domain, j.completed_at, j.published_at,
-                      j.expires_at, j.meta, j.results
-               FROM jobs j
-               WHERE j.is_published = 1 AND j.expires_at > ?
-                 AND NOT EXISTS (
-                   SELECT 1 FROM jobs o
-                   WHERE o.is_published = 1 AND o.expires_at > ?
-                     AND o.domain = j.domain
-                     AND (o.published_at > j.published_at
-                          OR (o.published_at = j.published_at AND o.rowid > j.rowid))
-                 )
-               ORDER BY j.published_at DESC
-               LIMIT ? OFFSET ?""",
-            (now, now, limit, offset),
-        )
-        rows = await cur.fetchall()
-        items = []
-        for row in rows:
-            meta = _json.loads(row["meta"]) if row["meta"] else {}
-            results = _json.loads(row["results"]) if row["results"] else {}
-            top = sorted(
-                (
-                    (cat, len(v))
-                    for cat, v in results.items()
-                    if isinstance(v, list) and v and cat != "highlights"
-                ),
-                key=lambda x: -x[1],
-            )[:3]
-            items.append({
-                "url_id": row["url_id"],
-                "domain": row["domain"],
-                "completed_at": row["completed_at"],
-                "published_at": row["published_at"],
-                "expires_at": row["expires_at"],
-                "summary": {
-                    "date_first_seen": meta.get("date_first_seen"),
-                    "snapshots_analyzed": meta.get("snapshots_analyzed"),
-                    "top_categories": [{"name": n, "count": c} for n, c in top],
-                },
-            })
-        return items
-    finally:
-        await db.close()
-
-
 async def expire_job_now(url_id: str) -> bool:
     """Force-expire a single job by setting expires_at to now()."""
     db = await get_db()

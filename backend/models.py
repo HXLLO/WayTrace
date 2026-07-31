@@ -158,11 +158,6 @@ class JobCreate(BaseModel):
     # Upper bound on selected_snapshots keeps a malicious client from
     # forcing a 5-million-item in-memory allocation in the pipeline.
     selected_snapshots: list[SnapshotRef] | None = Field(default=None, max_length=5000)
-    # Upfront publish choice. When true, the backend publishes the scan to
-    # the public feed as soon as it completes successfully. Stored on the
-    # job and applied by run_scan() in its finally block; survives the
-    # client closing their tab (the JS-only auto-publish wouldn't).
-    publish_on_complete: bool = False
     # Opt-in: email the signed-in user a link when the scan finishes. Honoured
     # only on the hosted service (needs an account email + Resend).
     notify_on_complete: bool = False

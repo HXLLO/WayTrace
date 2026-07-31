@@ -27,7 +27,7 @@ async def test_queued_job_restored_after_restart(tmp_db):
     await s1.create_job("live.com", "1.1.1.1")          # goes active
     second = await s1.create_job(
         "waiting.com", "2.2.2.2", user_id=7,
-        config=ScanConfig(cap=500), publish_on_complete=True,
+        config=ScanConfig(cap=500),
     )
     # "restart": a brand-new store restores from the DB
     s2 = JobStore()
@@ -38,7 +38,6 @@ async def test_queued_job_restored_after_restart(tmp_db):
     assert job["id"] == second["job_id"]                 # same job_id
     assert job["status"] == "queued"
     assert job["config"].cap == 500
-    assert job["publish_on_complete"] is True
     assert job["user_id"] == 7
     assert len(s2.waiting) == 2                          # both wait; worker promotes
 

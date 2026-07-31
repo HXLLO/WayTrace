@@ -1954,12 +1954,6 @@
     .myscans-status { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-dim); }
     .myscans-status.st-completed { color: var(--green); }
     .myscans-status.st-failed { color: var(--red); }
-    .myscans-pub {
-      font-size: 10px; text-transform: uppercase; letter-spacing: .06em;
-      text-align: center; padding: 3px 8px; border-radius: 6px;
-    }
-    .myscans-pub.on { color: var(--accent); background: var(--accent-glow); }
-    .myscans-pub.off { color: var(--text-faint); }
     .myscans-date { font-family: var(--mono); font-size: 12px; color: var(--text-faint); text-align: right; }
     /* In-flight scans (queued/running): rendered above the archive, ticking */
     .myscans-live { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
@@ -2208,25 +2202,6 @@
       .pub-share-row { flex-direction: column; }
       .pub-share-row .btn { width: 100%; justify-content: center; }
     }
-    /* Visibility badge under the share row. Reflects the publish_on_complete
-       choice the user made at submission time. Read-only here; users can
-       still toggle after the scan finishes via the Publish/Remove button. */
-    .pub-publish-badge {
-      margin-top: 14px; padding: 10px 12px;
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 13px; line-height: 1.5;
-      display: flex; align-items: center; gap: 10px;
-    }
-    .pub-publish-badge::before {
-      content: ''; flex-shrink: 0;
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--text-faint);
-    }
-    .pub-publish-badge.will-publish { color: var(--text); border-color: var(--accent); }
-    .pub-publish-badge.will-publish::before { background: var(--accent); }
-    .pub-publish-badge.will-stay-private { color: var(--text-dim); }
-    .pub-publish-badge.will-stay-private::before { background: var(--pivot); }
 
     .pub-error {
       padding: 64px 24px; text-align: center;
@@ -2447,22 +2422,22 @@
     }
     .r2-rt2 { padding: 14px 8px 6px; margin-top: 8px; border-top: 1px solid var(--surface3); }
     .r2-rlink {
-      display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 11px; border-radius: 6px;
-      font-size: 12.5px; color: var(--text-dim); cursor: pointer; border-left: 2px solid transparent;
+      display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-radius: 6px;
+      font-size: 12.5px; color: var(--text-dim); cursor: pointer; border: 1px solid transparent;
     }
     .r2-rlink { transition: background .12s, color .12s, border-color .12s; }
     .r2-rlink:hover { background: var(--surface2); color: var(--text); }
     .r2-rlink:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; color: var(--text); }
-    .r2-rlink.on { background: var(--accent-soft); color: var(--text); border-left-color: var(--accent); font-weight: 550; }
+    .r2-rlink.on { background: var(--accent-glow); color: var(--text); border-color: var(--accent); font-weight: 550; }
     .r2-rlink .r2-c { margin-left: auto; font-family: var(--mono); font-size: 11.5px; color: var(--accent); font-weight: 600; }
     .r2-rlink.zero { opacity: .55; }
     .r2-rlink.zero .r2-c { color: var(--text-faint); font-weight: 400; }
     .r2-rall {
-      display: flex; align-items: center; gap: 8px; padding: 7px 8px 7px 11px; border-radius: 6px;
-      font-size: 12.5px; color: var(--text); cursor: pointer; font-weight: 550; margin-top: 4px; border-left: 2px solid transparent;
+      display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 6px;
+      font-size: 12.5px; color: var(--text); cursor: pointer; font-weight: 550; margin-top: 4px; border: 1px solid transparent;
     }
     .r2-rall:hover { background: var(--surface2); }
-    .r2-rall.on { background: var(--accent-soft); border-left-color: var(--accent); }
+    .r2-rall.on { background: var(--accent-glow); border-color: var(--accent); }
     .r2-rall .i, .r2-nav .i { color: var(--accent); }
     .r2-emptytoggle {
       display: flex; align-items: center; gap: 7px; padding: 8px 8px 8px 11px; margin-top: 8px;

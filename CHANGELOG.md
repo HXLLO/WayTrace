@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.7.5
+
+- **The public feed is gone.** Almost every scan was kept private, so the feed sat empty and was already dropped from the homepage. The last of it is now removed: no more "publish to the feed" option anywhere, no publish endpoint. Your scans are yours.
+- **Sharing by link stays on the hosted service**, where handing someone a scan URL is the point. On a self-hosted install the copy-link button is gone, since every scan is already in your local history; opening a scan by its link still works everywhere.
+- **A real selector for categories.** On a finished scan, the selected category in the left rail is now outlined all the way around instead of wearing a single thick orange edge.
+
 ## v1.7.4
 
 - **A configuration panel for self-hosters.** New Configuration page (linked from the homepage footer): every scan and archive.org setting of your install, editable from the UI and applied live, no restart, no `.env` editing. Settings are grouped by pipeline stage (archive.org politeness, snapshot selection, scans and queue, advanced), each with its description, unit and recommended value. Changes persist in the local database and survive restarts; every setting has a reset, plus a global "back to safe values" button. Nothing is capped beyond technical validity, but each sensitive setting shows a risk zone: orange is aggressive, red carries a real chance archive.org blocks your IP. Your machine, your rules. The hosted service keeps its limits locked.

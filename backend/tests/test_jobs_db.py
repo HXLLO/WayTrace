@@ -12,7 +12,6 @@ from db import (
     save_job,
     get_job_by_url_id,
     set_published,
-    list_feed,
     delete_expired_jobs,
     expire_job_now,
 )
@@ -84,70 +83,6 @@ async def test_set_published_flips_flag(db_ready):
 @pytest.mark.asyncio
 async def test_set_published_unknown_returns_false(db_ready):
     assert await set_published("nope", True) is False
-
-
-@pytest.mark.asyncio
-async def test_feed_returns_only_published_sorted_desc(db_ready):
-    now = datetime.now(timezone.utc)
-    for i in range(3):
-        uid = f"u{i}"
-        await save_job(
-            url_id=uid, domain=f"d{i}.com", client_ip="1.1.1.1",
-            created_at=now, expires_at=now + timedelta(days=7),
-            status="completed",
-            meta={"date_first_seen": "2020-01", "snapshots_analyzed": i + 1},
-            results={"emails": [{"value": "x@y.z"}], "subdomains": [{"value": "a"}]},
-        )
-        if i != 1:
-            await set_published(uid, True)
-        await asyncio.sleep(0.01)  # ensure distinct published_at
-
-    feed = await list_feed(limit=10)
-    assert len(feed) == 2
-    assert [it["url_id"] for it in feed] == ["u2", "u0"]
-    # Top categories computed correctly
-    assert feed[0]["summary"]["top_categories"]
-    assert feed[0]["summary"]["snapshots_analyzed"] == 3
-
-
-@pytest.mark.asyncio
-async def test_feed_excludes_expired(db_ready):
-    now = datetime.now(timezone.utc)
-    await save_job(
-        url_id="fresh", domain="a.com", client_ip="1.1.1.1",
-        created_at=now, expires_at=now + timedelta(days=1),
-        status="completed", meta={}, results={},
-    )
-    await save_job(
-        url_id="stale", domain="b.com", client_ip="1.1.1.1",
-        created_at=now - timedelta(days=8), expires_at=now - timedelta(hours=1),
-        status="completed", meta={}, results={},
-    )
-    await set_published("fresh", True)
-    await set_published("stale", True)
-
-    feed = await list_feed()
-    assert [it["url_id"] for it in feed] == ["fresh"]
-
-
-@pytest.mark.asyncio
-async def test_feed_pagination(db_ready):
-    now = datetime.now(timezone.utc)
-    for i in range(5):
-        uid = f"p{i}"
-        await save_job(
-            url_id=uid, domain=f"{i}.com", client_ip="1.1.1.1",
-            created_at=now, expires_at=now + timedelta(days=7),
-            status="completed", meta={}, results={},
-        )
-        await set_published(uid, True)
-        await asyncio.sleep(0.01)
-
-    page1 = await list_feed(limit=2, offset=0)
-    page2 = await list_feed(limit=2, offset=2)
-    assert len(page1) == 2
-    assert len(page2) == 2
-    assert page1[0]["url_id"] != page2[0]["url_id"]
 
 
 @pytest.mark.asyncio

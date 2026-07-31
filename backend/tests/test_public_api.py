@@ -95,31 +95,6 @@ async def test_get_s_returns_410_when_expired(client):
     assert r.status_code == 410
 
 
-# ---------- POST /api/s/{url_id}/publish ----------
-
-@pytest.mark.anyio
-async def test_publish_then_unpublish(client):
-    now = datetime.now(timezone.utc)
-    await save_job(
-        url_id="pubme", domain="x.com", client_ip="1.1.1.1",
-        created_at=now, expires_at=now + timedelta(days=7),
-        status="completed", meta={}, results={},
-    )
-    r = await client.post("/api/s/pubme/publish", json={"published": True})
-    assert r.status_code == 200
-    assert r.json()["published"] is True
-
-    r = await client.post("/api/s/pubme/publish", json={"published": False})
-    assert r.status_code == 200
-    assert r.json()["published"] is False
-
-
-@pytest.mark.anyio
-async def test_publish_unknown_scan_returns_404(client):
-    r = await client.post("/api/s/nope/publish", json={"published": True})
-    assert r.status_code == 404
-
-
 # ---------- DELETE /api/s/{url_id} ----------
 
 @pytest.mark.anyio
@@ -141,86 +116,6 @@ async def test_delete_persisted_scan(client):
 async def test_delete_unknown_returns_404(client):
     r = await client.delete("/api/s/nope")
     assert r.status_code == 404
-
-
-# ---------- GET /api/feed ----------
-
-@pytest.mark.anyio
-async def test_feed_lists_only_published(client):
-    import asyncio
-    now = datetime.now(timezone.utc)
-    for i in range(3):
-        uid = f"feedid{i}"
-        await save_job(
-            url_id=uid, domain=f"d{i}.com", client_ip="1.1.1.1",
-            created_at=now, expires_at=now + timedelta(days=7),
-            status="completed",
-            meta={"date_first_seen": "2020-01"},
-            results={"emails": [{"value": "a@b.c"}]},
-        )
-        if i != 1:
-            await set_published(uid, True)
-        await asyncio.sleep(0.01)
-
-    r = await client.get("/api/feed")
-    body = r.json()
-    assert body["count"] == 2
-    ids = [it["url_id"] for it in body["items"]]
-    assert "feedid1" not in ids
-
-
-@pytest.mark.anyio
-async def test_feed_dedupes_by_domain(client):
-    """Re-scanning a domain must not show it twice; the feed keeps only the
-    most recently published scan per domain."""
-    import asyncio
-    now = datetime.now(timezone.utc)
-    await save_job(
-        url_id="dup_old", domain="same.com", client_ip="1.1.1.1",
-        created_at=now - timedelta(days=1), expires_at=now + timedelta(days=7),
-        status="completed", meta={}, results={},
-    )
-    await set_published("dup_old", True)
-    await asyncio.sleep(0.02)
-    await save_job(
-        url_id="dup_new", domain="same.com", client_ip="1.1.1.1",
-        created_at=now, expires_at=now + timedelta(days=7),
-        status="completed", meta={}, results={},
-    )
-    await set_published("dup_new", True)
-
-    r = await client.get("/api/feed")
-    body = r.json()
-    domains = [it["domain"] for it in body["items"]]
-    assert domains.count("same.com") == 1
-    ids = [it["url_id"] for it in body["items"]]
-    assert "dup_new" in ids and "dup_old" not in ids
-
-
-@pytest.mark.anyio
-async def test_feed_pagination(client):
-    import asyncio
-    now = datetime.now(timezone.utc)
-    for i in range(5):
-        uid = f"p{i}"
-        await save_job(
-            url_id=uid, domain=f"d{i}.com", client_ip="1.1.1.1",
-            created_at=now, expires_at=now + timedelta(days=7),
-            status="completed", meta={}, results={},
-        )
-        await set_published(uid, True)
-        await asyncio.sleep(0.01)
-
-    r = await client.get("/api/feed?limit=2&offset=2")
-    body = r.json()
-    assert body["count"] == 2
-
-
-@pytest.mark.anyio
-async def test_feed_caps_limit_at_100(client):
-    r = await client.get("/api/feed?limit=500")
-    # Just ensure no crash; empty feed is fine
-    assert r.status_code == 200
 
 
 # ---------- export.json / export.csv ----------

@@ -98,7 +98,7 @@
     </div>
     <p class="home-wayback"><span data-i18n="home.archivedby">Data archived by</span> <a href="https://web.archive.org" target="_blank" rel="noopener"><img class="wb-logo" src="/icons/wayback.svg" alt="Wayback Machine"></a></p>
     <p class="home-caption" data-i18n-html="home.caption">Public data only &middot; <a href="#/legal">Legal &amp; licence</a></p>
-    <p class="home-version" data-i18n-html="home.version">WayTrace v1.7.4 &middot; hosted &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">themes</a></p>
+    <p class="home-version" data-i18n-html="home.version">WayTrace v1.7.5 &middot; hosted &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">themes</a></p>
     <p class="home-version" id="home-config-link" hidden><a href="#/config">configuration</a></p>
     <p class="home-provenance" data-i18n="home.provenance">Open-source OSINT tool. The hosted build caps snapshots per scan; self-host it from GitHub to scan a domain in full.</p>
   </div>
@@ -114,7 +114,6 @@
       </div>
       <div id="public-scan-actions" class="pub-actions" style="display:none;">
         <a id="public-scan-download" class="btn" download>Download HTML</a>
-        <button id="public-scan-publish-btn" class="btn" onclick="onPublishToggle()">Publish to feed</button>
       </div>
     </div>
     <div id="public-scan-body"></div>
@@ -205,13 +204,6 @@
 
       <!-- Output -->
       <section class="scope-card scope-output">
-        <label class="scope-check">
-          <input type="checkbox" id="scope-publish-on-complete">
-          <span class="scope-check-txt">
-            <b data-i18n="Publish to the public feed when done">Publish to the public feed when done</b>
-            <small data-i18n="Off by default. Your scan stays private, only people with the link can see it. Tick to publish it to the public feed.">Off by default. Your scan stays private, only people with the link can see it. Tick to publish it to the public feed.</small>
-          </span>
-        </label>
 
       <div class="scope-estimate" id="scope-estimate" aria-live="polite"></div>
       <div class="scope-cap-note" id="scope-cap-note" hidden></div>

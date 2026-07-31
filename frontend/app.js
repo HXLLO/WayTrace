@@ -520,7 +520,7 @@ const I18N = {
     'home.adv.hint': "Les sous-domaines et la densité des snapshots se choisissent à l'étape suivante, une fois archive.org interrogé pour ce domaine.",
     'home.hint': 'Appuyez sur <kbd>Entrée</kbd> pour choisir les sous-domaines, les dates et la densité avant de lancer.',
     'home.caption': 'Données publiques uniquement &middot; <a href="#/legal">Mentions légales</a>',
-    'home.version': 'WayTrace v1.7.4 &middot; hébergé &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">thèmes</a>',
+    'home.version': 'WayTrace v1.7.5 &middot; hébergé &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">thèmes</a>',
     'home.archivedby': 'Archives par',
     'Pages read from': 'Pages lues depuis',
     'Querying archive.org': 'Interrogation archive.org',
@@ -640,9 +640,9 @@ const I18N = {
     'Sign in': 'Connexion',
     'Sign in or create an account': 'Connectez-vous ou créez un compte',
     'Create your account to scan': 'Créez votre compte pour analyser',
-    'Scanning is free. An account just keeps your scans tied to you and lets you choose which stay public.': "L'analyse est gratuite. Le compte relie simplement vos scans à vous et vous laisse choisir lesquels restent publics.",
+    'Scanning is free. An account just keeps your scans tied to you, private.': "L'analyse est gratuite. Le compte relie simplement vos scans à vous, en privé.",
     'Sign in or create your account': 'Connectez-vous ou créez votre compte',
-    'One account to run scans, keep your history, and choose which results stay public.': 'Un compte pour lancer des scans, garder votre historique et choisir quels résultats restent publics.',
+    'One account to run scans and keep your history. Your scans stay private to you.': 'Un compte pour lancer des scans et garder votre historique. Vos scans restent privés.',
     // --- Scope / scan journey (static labels) ---
     'Subdomains': 'Sous-domaines',
     'filter subdomains…': 'filtrer les sous-domaines…',
@@ -727,7 +727,7 @@ const I18N = {
     'Run a denser scan of this domain, reusing what was already found': 'Relancer un scan plus dense de ce domaine, en réutilisant ce qui a déjà été trouvé',
     'Something went wrong. Please try again.': 'Une erreur est survenue. Réessayez.',
     'Filter the table to': 'Filtrer la table sur', 'more': 'autres',
-    'Publish to feed': 'Publier dans le flux', 'public': 'public', 'expires': 'expire',
+    'expires': 'expire',
     'Copied ✓': 'Copié ✓',
     'Density': 'Densité',
     'Full range': 'Plage complète',
@@ -738,9 +738,6 @@ const I18N = {
     'Launch scan': 'Lancer le scan',
     'Tune the scan before launching it.': 'Réglez le scan avant de le lancer.',
     'Querying archive.org for subdomains...': 'Interrogation d’archive.org pour les sous-domaines...',
-    // Publish / email checkboxes (split into bold + small)
-    'Publish to the public feed when done': 'Publier dans le flux public à la fin',
-    'Off by default. Your scan stays private, only people with the link can see it. Tick to publish it to the public feed.': 'Désactivé par défaut. Votre scan reste privé, seules les personnes avec le lien peuvent le voir. Cochez pour le publier dans le flux public.',
     'Delete scan': 'Supprimer le scan',
     'Delete this scan permanently? This cannot be undone.': 'Supprimer définitivement ce scan ? Cette action est irréversible.',
     "Email me when it's done": 'Me prévenir par e-mail à la fin',
@@ -1085,12 +1082,6 @@ function navigate(hash) {
     checkServiceStatus();   // refresh the status strip on every return home
   } else if (view === 'scan-public' && parts[1]) {
     const newUrlId = decodeURIComponent(parts[1]);
-    // Reset auto-publish state whenever the visible scan changes so the
-    // user's intent for the previous scan never carries over.
-    if (newUrlId !== publicScanUrlId) {
-      publicScanAutoPublish = false;
-      publicScanAutoPublishFired = false;
-    }
     publicScanUrlId = newUrlId;
     publicScanLastStatus = null;
     showScanSkeleton();
@@ -1329,23 +1320,6 @@ async function pollPublicScan() {
       publicScanPollTimer = setTimeout(pollPublicScan, next);
       return;
     }
-    // Status is terminal (completed/failed). Honour the user's
-    // upfront auto-publish choice exactly once.
-    if (job.status === 'completed' && publicScanAutoPublish && !publicScanAutoPublishFired) {
-      publicScanAutoPublishFired = true;
-      try {
-        await fetch(API + '/api/s/' + encodeURIComponent(publicScanUrlId) + '/publish', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({published: true}),
-        });
-        // Re-render with is_published=1 so the control shows the read-only "public" badge.
-        renderV2InLegacyView({...job, is_published: 1});
-        showToast('Published to feed.');
-      } catch (_) {
-        showToast('Auto-publish failed. Use the Publish button manually.');
-      }
-    }
   } catch (e) {
     // Network blip (lost wifi, sleep/resume, archive.org-driven backend stall).
     // Do not kill the loop: a finished scan would otherwise never show up.
@@ -1435,9 +1409,9 @@ function renderPublicScan(job) {
         <div class="pub-run-bar indeterminate"><div class="pub-run-bar-fill"></div></div>
         <button class="btn" style="margin-top: 28px;" onclick="cancelPublicScan()">${esc(t('Cancel my spot'))}</button>
       </div>
-      ${renderPrivacyCard(job)}
+      ${typeof renderPrivacyCard === 'function' ? renderPrivacyCard(job) : ''}
     `;
-    wireCopyShareLink();
+    if (typeof wireCopyShareLink === 'function') wireCopyShareLink();
   } else if (status === 'running') {
     actions.style.display = 'none';
     meta.textContent = t('Scanning');
@@ -1501,9 +1475,9 @@ function renderPublicScan(job) {
           <div class="pub-live"></div>
           <div class="pub-run-wb"><span>${esc(t('Pages read from'))}</span> <img class="wb-logo" src="/icons/wayback.svg" alt="Wayback Machine"></div>
         </div>
-        ${renderPrivacyCard(job)}
+        ${typeof renderPrivacyCard === 'function' ? renderPrivacyCard(job) : ''}
       `;
-      wireCopyShareLink();
+      if (typeof wireCopyShareLink === 'function') wireCopyShareLink();
       live = body.querySelector('.pub-run-live');
     }
     const stepEl = live.querySelector('.pub-run-step');
@@ -1655,51 +1629,6 @@ function flashMsg(msg) {
   el._t = setTimeout(() => el.classList.remove('show'), 1400);
 }
 
-/* Mirror of the user's upfront publish choice (the home-form / scope-view
-   checkbox). Set on submit, displayed on the privacy card so users see
-   what they decided. Backend persists the same flag and applies it in
-   _persist_and_finish, this var is just for the UI hint. */
-let publicScanAutoPublish = false;
-let publicScanAutoPublishFired = false;  // legacy guard; backend handles it now
-
-/* Private-by-default note + a one-tap "copy the share URL" affordance.
-   Shows whether the scan is going to be auto-published when done (read
-   straight from the API's publish_on_complete field, falling back to the
-   in-memory flag set during submission). */
-function renderPrivacyCard(job) {
-  const shareUrl = window.location.origin + '/s/' + (publicScanUrlId || '');
-  const willPublish = !!(job && job.publish_on_complete) || publicScanAutoPublish;
-  const badge = willPublish
-    ? `<div class="pub-publish-badge will-publish">Will publish to the feed when done</div>`
-    : `<div class="pub-publish-badge will-stay-private">Stays private. Publish anytime from this page when it's done.</div>`;
-  return `
-    <div class="pub-privacy-card">
-      <div class="pub-privacy-title">Your share link</div>
-      <div class="pub-share-row">
-        <input class="pub-share-input" id="pub-share-url" type="text" readonly value="${escAttr(shareUrl)}" onclick="this.select()">
-        <button class="btn" id="pub-share-copy" type="button">Copy link</button>
-      </div>
-      ${badge}
-    </div>
-  `;
-}
-
-function wireCopyShareLink() {
-  const btn = document.getElementById('pub-share-copy');
-  if (!btn) return;
-  btn.addEventListener('click', async () => {
-    const input = document.getElementById('pub-share-url');
-    const v = input ? input.value : '';
-    try {
-      await navigator.clipboard.writeText(v);
-      btn.textContent = t('Copied ✓');
-      setTimeout(() => { btn.textContent = t('Copy link'); }, 1400);
-    } catch (_) {
-      input?.select();
-      flashMsg('Press Ctrl/Cmd-C to copy');
-    }
-  });
-}
 
 /* Empty-page icons for error / expired states. SVG inline so they tint with
    the surrounding text color and don't require an extra round-trip. */
@@ -1741,22 +1670,6 @@ function renderPublicScanExpired() {
       <a href="#/" class="btn btn-accent">Run a new scan</a>
     </div>
   `;
-}
-
-async function onPublishToggle() {
-  // Publish-only: users can add a scan to the feed but not remove it.
-  if (!publicScanUrlId) return;
-  if (!confirm('This scan will be publicly visible on the homepage feed for the remaining retention period. Continue?')) return;
-  try {
-    const resp = await fetch(API + '/api/s/' + encodeURIComponent(publicScanUrlId) + '/publish', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({published: true}),
-    });
-    if (!resp.ok) { showToast('Publish failed.'); return; }
-    pollPublicScan();
-    showToast('Published to feed');
-  } catch (_) { showToast('Publish failed.'); }
 }
 
 async function cancelPublicScan() {
@@ -2031,8 +1944,6 @@ function _applyScopePrefill() {
     if (scopeMonthFrom) scopeDayFrom = scopeMonthFrom.replace('-', '') + '01';
     if (scopeMonthTo) scopeDayTo = scopeMonthTo.replace('-', '') + '31';
   }
-  const pubEl = document.getElementById('scope-publish-on-complete');
-  if (pubEl && typeof p.publish === 'boolean') pubEl.checked = p.publish;
 }
 
 // Preflight succeeded but archive.org has zero HTML captures for this domain:
@@ -2581,9 +2492,7 @@ async function launchScopedScan() {
     // Assemble the explicit snapshot list from the picker. In fallback mode
     // (no preflight data) it is empty and the backend crawls on its own.
     const selected = scopeFallback ? [] : _scopeAssembleSelected();
-    const publish = !!($('scope-publish-on-complete') && $('scope-publish-on-complete').checked);
-    publicScanAutoPublish = publish;
-    const body = { domain: scopeDomain, publish_on_complete: publish };
+    const body = { domain: scopeDomain };
     // "Scan more" (or an explicit re-scan) bypasses the already-scanned guardrail.
     if (_forceRescan) { body.force = true; _forceRescan = false; }
     if (selected.length > 0) {
@@ -3551,41 +3460,17 @@ function renderV2InLegacyView(job) {
   const actions = document.querySelector('#view-results .results-actions');
   if (actions) {
     const expires = job.expires_at ? ` <span class="v2-expires-badge">${t('expires')} ${relativeFutureTime(job.expires_at)}</span>` : '';
-    // Only the owner may toggle publish on an account-owned scan. For anonymous
-    // scans can_publish is true (url_id capability). When a viewer can't publish,
-    // show a read-only "public" badge if it is published, otherwise nothing.
-    const canPublish = job.can_publish !== false;
-    // Users can publish to the feed but not remove a scan from it. Once
-    // published, show a read-only badge instead of a "Remove from feed" button.
-    const publishCtl = job.is_published
-      ? `<span class="v2-expires-badge">${t('public')}</span>`
-      : (canPublish ? `<button class="btn" id="v2-publish-btn" onclick="onPublishToggle()">${t('Publish to feed')}</button>` : '');
     const uid = encodeURIComponent(job.url_id);
+    let shareBtn = '';
     actions.innerHTML = `
       <a class="btn btn-accent" id="v2-download-btn"
          href="/api/s/${uid}/export.html" download>${t('Download HTML')}</a>
       <a class="btn" href="/api/s/${uid}/export.json" download>${t('JSON')}</a>
       <a class="btn" href="/api/s/${uid}/export.csv" download>${t('CSV')}</a>
       <button class="btn" type="button" onclick="scanMore('${esc(job.domain)}')" title="${esc(t('Run a denser scan of this domain, reusing what was already found'))}">${t('Scan more')}</button>
-      <button class="btn" id="v2-copy-link-btn" type="button" title="Copy the share URL to your clipboard">${t('Copy link')}</button>
-      ${publishCtl}
+      ${shareBtn}
       ${expires}
     `;
-    const _pubBtn = document.getElementById('v2-publish-btn');
-    if (_pubBtn) _pubBtn.dataset.published = job.is_published ? '1' : '0';
-    const _copyBtn = document.getElementById('v2-copy-link-btn');
-    if (_copyBtn) {
-      _copyBtn.addEventListener('click', async () => {
-        const url = window.location.origin + '/s/' + encodeURIComponent(job.url_id);
-        try {
-          await navigator.clipboard.writeText(url);
-          _copyBtn.textContent = t('Copied ✓');
-          setTimeout(() => { _copyBtn.textContent = t('Copy link'); }, 1400);
-        } catch (_) {
-          showToast('Copy failed. URL: ' + url);
-        }
-      });
-    }
   }
 
   // Header (domain + meta), then the new two-view master-detail report.
@@ -4068,7 +3953,6 @@ async function renderMyScans() {
     <div class="myscans-row" onclick="location.hash='#/s/${encodeURIComponent(s.url_id)}'">
       <span class="myscans-domain">${esc(s.domain)}</span>
       <span class="myscans-status st-${esc(s.status)}">${esc(t(s.status))}</span>
-      <span class="myscans-pub ${s.is_published ? 'on' : 'off'}">${s.is_published ? t('Public') : t('Private')}</span>
       <span class="myscans-date">${esc((s.created_at || '').slice(0, 10))}</span>
       <button class="myscans-del" title="${esc(t('Delete scan'))}" aria-label="${esc(t('Delete scan'))}" onclick="deleteMyScan('${esc(s.url_id)}', event)">&times;</button>
     </div>`).join('') + '</div>';

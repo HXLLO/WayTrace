@@ -26,42 +26,6 @@ def test_scan_button_has_a_keyboard_focus_ring(live_server, page):
         f"Scan button has no visible keyboard focus ring: {ring}"
 
 
-def test_feed_shows_error_state_on_failure_not_empty(live_server, page):
-    # Force /api/feed to fail -> the ERROR state must show (with Retry), not the
-    # "no scans yet" empty state (which would misrepresent a network problem).
-    page.route("**/api/feed*", lambda route: route.fulfill(status=500, body="nope"))
-    page.goto(live_server + "/", wait_until="networkidle")
-    page.wait_for_selector(".feed-error", timeout=5000)
-    assert page.locator(".feed-error").count() == 1
-    assert page.locator(".feed-error button", has_text="").count() >= 1  # Retry button
-    assert not page.locator("#home-feed-empty").is_visible()
-
-
-def test_feed_shows_empty_state_on_genuine_empty(live_server, page):
-    page.route("**/api/feed*", lambda route: route.fulfill(
-        status=200, content_type="application/json", body='{"items": [], "count": 0}'))
-    page.goto(live_server + "/", wait_until="networkidle")
-    page.wait_for_selector("#home-feed-empty", state="visible", timeout=5000)
-    assert page.locator("#home-feed-empty").is_visible()
-    assert page.locator(".feed-error").count() == 0
-
-
-def test_feed_retry_refetches(live_server, page):
-    calls = {"n": 0}
-    def handler(route):
-        calls["n"] += 1
-        if calls["n"] == 1:
-            route.fulfill(status=500, body="nope")
-        else:
-            route.fulfill(status=200, content_type="application/json", body='{"items": [], "count": 0}')
-    page.route("**/api/feed*", handler)
-    page.goto(live_server + "/", wait_until="networkidle")
-    page.wait_for_selector(".feed-error", timeout=5000)
-    page.locator(".feed-error button").first.click()
-    page.wait_for_selector("#home-feed-empty", state="visible", timeout=5000)
-    assert calls["n"] >= 2
-
-
 def test_completion_moment_toast(live_server, page):
     # Drive renderPublicScan through running -> completed and assert a neutral
     # completion toast appears with a finding count.

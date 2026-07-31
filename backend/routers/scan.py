@@ -194,18 +194,6 @@ async def _persist_and_finish(job_id: str, start: float) -> None:
     except Exception:
         logger.exception("Failed to persist job {} to DB", job_id)
 
-    # Honour the upfront publish choice once the scan persists successfully.
-    # This survives the client closing their tab; the JS-only auto-publish
-    # would silently drop the intent. Only applies to completed scans;
-    # failed/cancelled scans stay off the feed regardless.
-    if live.get("status") == "completed" and live.get("publish_on_complete"):
-        try:
-            from db import set_published as _set_published
-            await _set_published(live["url_id"], True)
-            logger.info("Auto-published scan {} per upfront choice", live["url_id"])
-        except Exception:
-            logger.exception("Auto-publish failed for job {}", job_id)
-
 
     duration = time.time() - start
     await store.finish_job(job_id, duration_seconds=duration)
@@ -672,7 +660,6 @@ async def create_scan(body: JobCreate, request: Request):
             client_ip=client_ip,
             config=scan_config,
             selected_snapshots=sel_snaps,
-            publish_on_complete=body.publish_on_complete,
         )
     except PerIpLimitError:
         raise HTTPException(
