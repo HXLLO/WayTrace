@@ -546,7 +546,7 @@ async def list_recent_scans(limit: int = 50) -> list[dict]:
     try:
         now = _iso(datetime.now(timezone.utc))
         cur = await db.execute(
-            """SELECT url_id, domain, status, is_published, created_at
+            """SELECT url_id, domain, status, is_published, created_at, completed_at
                FROM jobs WHERE expires_at > ?
                ORDER BY created_at DESC LIMIT ?""",
             (now, limit),

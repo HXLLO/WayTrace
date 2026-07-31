@@ -1932,14 +1932,15 @@
     .myscans-note > div { margin-top: 14px; }
     .myscans-list { display: flex; flex-direction: column; gap: 6px; }
     .myscans-row {
-      display: grid; grid-template-columns: 1fr 104px 84px 104px 28px; align-items: center; gap: 12px;
+      display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 16px;
       padding: 12px 14px; background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius-lg); cursor: pointer;
       transition: border-color .12s var(--ease-out), background .12s var(--ease-out);
     }
     .myscans-row:hover { border-color: var(--border-hover); background: var(--surface2, var(--surface)); }
+    .myscans-actions { justify-self: end; display: flex; align-items: center; gap: 6px; }
     .myscans-del {
-      justify-self: end; width: 24px; height: 24px; padding: 0;
+      width: 24px; height: 24px; padding: 0;
       display: flex; align-items: center; justify-content: center;
       background: transparent; border: 1px solid transparent; border-radius: var(--radius);
       color: var(--text-faint); font-size: 16px; line-height: 1; cursor: pointer;
@@ -1947,6 +1948,18 @@
     }
     .myscans-del:hover { color: var(--red); border-color: var(--border-hover); background: var(--surface2, var(--surface)); }
     .myscans-del:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    /* Two-step delete confirmation, in place of a native dialog. */
+    .myscans-confirm-q { font-size: 12px; color: var(--text-dim); }
+    .myscans-del-yes, .myscans-del-no {
+      font-size: 12px; padding: 4px 10px; border-radius: var(--radius);
+      border: 1px solid var(--border); background: transparent; cursor: pointer;
+      transition: color .12s var(--ease-out), border-color .12s var(--ease-out), background .12s var(--ease-out);
+    }
+    .myscans-del-yes { color: var(--red); border-color: var(--red); }
+    .myscans-del-yes:hover { background: var(--red-dim); }
+    .myscans-del-no { color: var(--text-dim); }
+    .myscans-del-no:hover { color: var(--text); border-color: var(--border-hover); }
+    .myscans-del-yes:focus-visible, .myscans-del-no:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
     .myscans-domain {
       font-family: var(--mono); font-size: 14px; color: var(--text-bright);
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -1954,7 +1967,9 @@
     .myscans-status { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-dim); }
     .myscans-status.st-completed { color: var(--green); }
     .myscans-status.st-failed { color: var(--red); }
-    .myscans-date { font-family: var(--mono); font-size: 12px; color: var(--text-faint); text-align: right; }
+    .myscans-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; }
+    .myscans-when { font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
+    .myscans-dur { font-size: 11px; color: var(--text-faint); }
     /* In-flight scans (queued/running): rendered above the archive, ticking */
     .myscans-live { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
     .myscans-row.live { grid-template-columns: 10px 1fr auto minmax(0, 220px) 28px; background: var(--surface2, var(--surface)); }

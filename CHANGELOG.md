@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.7.6
+
+- **A scan can't be deleted by accident anymore.** In the scan history, the delete cross now turns into an explicit "Delete / Keep" choice in place, so it takes a deliberate second click, not one stray tap, to remove a scan.
+- **Precise timing on the history page.** Each scan now shows exactly when it started, to the second, and how long it took to run.
+
 ## v1.7.5
 
 - **The public feed is gone.** Almost every scan was kept private, so the feed sat empty and was already dropped from the homepage. The last of it is now removed: no more "publish to the feed" option anywhere, no publish endpoint. Your scans are yours.

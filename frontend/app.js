@@ -520,7 +520,7 @@ const I18N = {
     'home.adv.hint': "Les sous-domaines et la densité des snapshots se choisissent à l'étape suivante, une fois archive.org interrogé pour ce domaine.",
     'home.hint': 'Appuyez sur <kbd>Entrée</kbd> pour choisir les sous-domaines, les dates et la densité avant de lancer.',
     'home.caption': 'Données publiques uniquement &middot; <a href="#/legal">Mentions légales</a>',
-    'home.version': 'WayTrace v1.7.5 &middot; hébergé &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">thèmes</a>',
+    'home.version': 'WayTrace v1.7.6 &middot; hébergé &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">thèmes</a>',
     'home.archivedby': 'Archives par',
     'Pages read from': 'Pages lues depuis',
     'Querying archive.org': 'Interrogation archive.org',
@@ -740,6 +740,7 @@ const I18N = {
     'Querying archive.org for subdomains...': 'Interrogation d’archive.org pour les sous-domaines...',
     'Delete scan': 'Supprimer le scan',
     'Delete this scan permanently? This cannot be undone.': 'Supprimer définitivement ce scan ? Cette action est irréversible.',
+    'Delete?': 'Supprimer ?', 'Delete': 'Supprimer', 'Keep': 'Conserver', 'took': 'a pris',
     "Email me when it's done": 'Me prévenir par e-mail à la fin',
     'Off by default. We send a link to your account email once the scan finishes, handy for long scans.': 'Désactivé par défaut. Nous envoyons un lien à l’adresse de votre compte une fois le scan terminé, pratique pour les longs scans.',
     // --- Scope dynamic (density labels/hints) ---
@@ -1716,6 +1717,28 @@ function formatEta(seconds) {
   if (seconds < 60) return Math.round(seconds) + 's';
   if (seconds < 3600) return Math.round(seconds / 60) + ' min';
   return Math.round(seconds / 3600) + 'h';
+}
+
+// Precise local timestamp "YYYY-MM-DD HH:MM:SS" from a stored (naive UTC) ISO.
+function fmtScanStamp(iso) {
+  if (!iso) return '';
+  const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
+  if (isNaN(d.getTime())) return '';
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} `
+    + `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+// Wall-clock a scan took, from its start and completion ISO timestamps.
+function fmtScanDuration(startIso, endIso) {
+  if (!startIso || !endIso) return '';
+  const a = new Date(startIso.endsWith('Z') ? startIso : startIso + 'Z').getTime();
+  const b = new Date(endIso.endsWith('Z') ? endIso : endIso + 'Z').getTime();
+  let s = Math.round((b - a) / 1000);
+  if (!isFinite(s) || s < 0) return '';
+  if (s < 60) return s + 's';
+  if (s < 3600) return `${Math.floor(s / 60)}m ${s % 60}s`;
+  return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
 }
 
 function relativePastTime(iso) {
@@ -3953,16 +3976,50 @@ async function renderMyScans() {
     <div class="myscans-row" onclick="location.hash='#/s/${encodeURIComponent(s.url_id)}'">
       <span class="myscans-domain">${esc(s.domain)}</span>
       <span class="myscans-status st-${esc(s.status)}">${esc(t(s.status))}</span>
-      <span class="myscans-date">${esc((s.created_at || '').slice(0, 10))}</span>
-      <button class="myscans-del" title="${esc(t('Delete scan'))}" aria-label="${esc(t('Delete scan'))}" onclick="deleteMyScan('${esc(s.url_id)}', event)">&times;</button>
+      <span class="myscans-meta">
+        <span class="myscans-when">${esc(fmtScanStamp(s.created_at))}</span>
+        ${fmtScanDuration(s.created_at, s.completed_at) ? `<span class="myscans-dur">${esc(t('took'))} ${esc(fmtScanDuration(s.created_at, s.completed_at))}</span>` : ''}
+      </span>
+      ${_scanActionsCell(s.url_id, t('Delete scan'))}
     </div>`).join('') + '</div>';
 }
 
-// Delete a scan the current visitor owns (the url_id is the capability). Used
-// from the My scans list; the row itself navigates, so stop propagation.
-async function deleteMyScan(urlId, ev) {
+// Delete affordance for a My-scans row. A scan is not trivially destroyed by a
+// single stray click: the cross turns into an explicit "Delete / Keep" pair
+// (in place, no native dialog), and only the deliberate second click removes it.
+function _scanActionsCell(uid, label) {
+  return `<span class="myscans-actions" data-uid="${escAttr(uid)}" data-label="${escAttr(label)}">`
+    + `<button class="myscans-del" title="${escAttr(label)}" aria-label="${escAttr(label)}"`
+    + ` onclick="askDeleteMyScan(this, event)">&times;</button></span>`;
+}
+
+function askDeleteMyScan(btn, ev) {
   if (ev) ev.stopPropagation();
-  if (!confirm(t('Delete this scan permanently? This cannot be undone.'))) return;
+  const box = btn.closest('.myscans-actions');
+  if (!box) return;
+  box.classList.add('confirming');
+  box.innerHTML =
+    `<span class="myscans-confirm-q">${esc(t('Delete?'))}</span>`
+    + `<button class="myscans-del-yes" type="button" onclick="confirmDeleteMyScan(this, event)">${esc(t('Delete'))}</button>`
+    + `<button class="myscans-del-no" type="button" onclick="cancelDeleteMyScan(this, event)">${esc(t('Keep'))}</button>`;
+}
+
+function cancelDeleteMyScan(btn, ev) {
+  if (ev) ev.stopPropagation();
+  const box = btn.closest('.myscans-actions');
+  if (!box) return;
+  box.classList.remove('confirming');
+  box.innerHTML = `<button class="myscans-del" title="${escAttr(box.dataset.label || '')}"`
+    + ` aria-label="${escAttr(box.dataset.label || '')}" onclick="askDeleteMyScan(this, event)">&times;</button>`;
+}
+
+// Delete a scan the current visitor owns (the url_id is the capability). Only
+// reached after the explicit in-row confirmation above.
+async function confirmDeleteMyScan(btn, ev) {
+  if (ev) ev.stopPropagation();
+  const box = btn.closest('.myscans-actions');
+  const urlId = box && box.dataset.uid;
+  if (!urlId) return;
   try {
     const r = await fetch(API + '/api/s/' + encodeURIComponent(urlId), { method: 'DELETE' });
     if (!r.ok && r.status !== 404) {

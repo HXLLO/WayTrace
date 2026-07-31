@@ -176,6 +176,20 @@ async def test_local_scans_lists_all_published_and_private():
     scans = await list_recent_scans()
     ids = {s["url_id"] for s in scans}
     assert {"pubd", "priv"} <= ids          # both, published or not
+    # The My-scans list carries the timing fields the history page renders.
+    assert all("created_at" in s and "completed_at" in s for s in scans)
+
+
+@pytest.mark.anyio
+async def test_local_scans_reports_completed_at_for_duration():
+    from db import list_recent_scans, save_job
+    now = datetime.now(timezone.utc)
+    await save_job(url_id="timed", domain="t.com", client_ip="1.1.1.1", created_at=now,
+                   completed_at=now + timedelta(seconds=154), expires_at=now + timedelta(days=7),
+                   status="completed", meta={}, results={})
+    scans = await list_recent_scans()
+    row = next(s for s in scans if s["url_id"] == "timed")
+    assert row["completed_at"] is not None
 
 
 @pytest.mark.anyio
