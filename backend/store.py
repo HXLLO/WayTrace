@@ -21,6 +21,16 @@ from loguru import logger
 from config import settings
 from services.ids import generate_url_id
 
+# Keep-forever horizon for scans when retention is set to 0 (infinite). Far
+# enough that expires_at > now always holds, so the purge never touches them.
+_RETENTION_FOREVER = timedelta(days=365 * 100)
+
+
+def retention_timedelta() -> timedelta:
+    """How long a finished scan is kept. scan_retention_days <= 0 means forever."""
+    days = settings.scan_retention_days
+    return _RETENTION_FOREVER if days <= 0 else timedelta(days=days)
+
 
 class PerIpLimitError(Exception):
     """Raised when a single client IP has too many in-flight jobs."""
@@ -114,7 +124,7 @@ class JobStore:
             await save_queued_job(
                 url_id=url_id, job_id=job_id, domain=domain,
                 client_ip=client_ip, created_at=now,
-                expires_at=now + timedelta(days=settings.scan_retention_days),
+                expires_at=now + retention_timedelta(),
                 user_id=user_id,
                 config_json=config.model_dump_json()
                 if config is not None and hasattr(config, "model_dump_json") else None,

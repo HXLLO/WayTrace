@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.7.8
+
+- **The Settings panel is fully bilingual and safer to use.** Every label, description, unit and control is translated in both languages. Nothing is applied until you click a **Save** button that appears next to a setting when you change it, so a value is never committed by accident.
+- **One-click restart.** The few settings that need a restart now offer a **Restart now** button: the server restarts itself, the page waits for it to come back, and reloads. Works the same however you run WayTrace.
+- **Keep scans forever.** Scan retention accepts an **infinite (∞)** option, so a self-hosted install can keep every scan indefinitely.
+- **Steadier navbar.** Switching between English and French no longer nudges the top menu around.
+
 ## v1.7.7
 
 - **Self-hosting is simpler.** The self-hosted build has no accounts and needs none: it now carries a first-class **Settings** entry in the navbar (the panel that tunes every scan and archive.org option), instead of a discreet footer link. Copy that assumed a hosted account or service has been reworked so nothing on a local install talks about signing in, a hosted snapshot ceiling, or a feed that no longer exists.

@@ -457,10 +457,15 @@ const I18N = {
     'themes.accent2': 'Accent',
     'themes.reset': 'Revenir au thème par défaut',
     'config.title': 'Réglages',
-    'config.sub': "Tous les réglages de scan et d'archive.org de cette installation, appliqués à chaud et enregistrés localement. La zone orange est agressive; la zone rouge comporte un risque réel qu'archive.org bloque votre IP. Votre machine, vos règles.",
-    'config.disabled': "Le panneau de configuration est désactivé sur cette instance.",
-    'config.restartnote': "Certains réglages modifiés ne prendront effet qu'après un redémarrage du serveur.",
+    'config.sub': "Ces valeurs par défaut viennent de nombreux tests, mais tout l'intérêt est que vous pouvez tout régler : chaque paramètre de scan et d'archive.org de cette installation, enregistré localement et appliqué quand vous cliquez sur Enregistrer. La zone orange est agressive; la zone rouge comporte un risque réel qu'archive.org bloque votre IP. Votre machine, vos règles. Si vous trouvez un meilleur équilibre, partagez votre expérience.",
+    'config.disabled': "Le panneau de réglages est désactivé sur cette instance.",
     'config.safe': 'Revenir aux valeurs sûres',
+    'Save': 'Enregistrer',
+    'Set to unlimited': 'Définir sur illimité',
+    'Some changed settings need a restart to take effect.': 'Certains réglages modifiés nécessitent un redémarrage pour prendre effet.',
+    'Restart now': 'Redémarrer maintenant',
+    'Restarting…': 'Redémarrage…',
+    'Restart is taking longer than expected. Reload the page manually.': 'Le redémarrage prend plus de temps que prévu. Rechargez la page manuellement.',
     'Archive.org politeness': 'Politesse archive.org',
     'Snapshot selection': 'Sélection des snapshots',
     'Scans & queue': "Scans et file d'attente",
@@ -468,6 +473,8 @@ const I18N = {
     'recommended': 'recommandé',
     'reset': 'réinitialiser',
     'restart required': 'redémarrage requis',
+    'days': 'jours',
+    'bytes': 'octets',
     'Real risk that archive.org blocks your IP.': "Risque réel qu'archive.org bloque votre IP.",
     'Starting request rate of the adaptive governor.': 'Débit de requêtes de départ du gouverneur adaptatif.',
     'Floor the adaptive rate never drops below.': 'Plancher sous lequel le débit adaptatif ne descend jamais.',
@@ -493,9 +500,8 @@ const I18N = {
     'In-flight scans allowed per client IP.': 'Scans simultanés autorisés par IP cliente.',
     'Hard wall-clock limit of a single scan.': "Durée maximale d'un scan.",
     'Download-phase budget; past it the scan analyzes what it already has. 0 disables the budget.': "Budget de la phase de téléchargement; au-delà, le scan analyse ce qu'il a déjà. 0 désactive le budget.",
-    'How long finished scans are kept and reused.': 'Durée de conservation et de réutilisation des scans terminés.',
+    'How long finished scans are kept and reused. 0 keeps them forever.': 'Durée de conservation et de réutilisation des scans terminés. 0 les conserve indéfiniment.',
     'Pause between expired-scan cleanup passes.': 'Pause entre deux passes de nettoyage des scans expirés.',
-    'Domain whose scan is kept forever as the homepage example. Empty disables it.': "Domaine dont le scan sert d'exemple permanent sur l'accueil. Vide pour désactiver.",
     'Trust Cloudflare headers for the client IP. Only behind Cloudflare.': "Faire confiance aux en-têtes Cloudflare pour l'IP cliente. Uniquement derrière Cloudflare.",
     'Serve the interactive Swagger docs at /docs.': 'Servir la documentation interactive Swagger sur /docs.',
     'Verbosity of the server logs.': 'Verbosité des journaux du serveur.',
@@ -522,7 +528,7 @@ const I18N = {
     'home.adv.hint': "Les sous-domaines et la densité des snapshots se choisissent à l'étape suivante, une fois archive.org interrogé pour ce domaine.",
     'home.hint': 'Appuyez sur <kbd>Entrée</kbd> pour choisir les sous-domaines, les dates et la densité avant de lancer.',
     'home.caption': 'Données publiques uniquement &middot; <a href="#/legal">Mentions légales</a>',
-    'home.version': 'WayTrace v1.7.7 &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">thèmes</a>',
+    'home.version': 'WayTrace v1.7.8 &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">thèmes</a>',
     'home.archivedby': 'Archives par',
     'Pages read from': 'Pages lues depuis',
     'Querying archive.org': 'Interrogation archive.org',
@@ -930,16 +936,25 @@ function initLang() {
 }
 
 /* ===== SELF-HOST CONFIG PANEL ===== */
-/* The panel edits live Settings through /api/config. Full re-render after each
-   change: the API is local, and it keeps overridden/risk states honest. */
+/* The panel edits live Settings through /api/config. Nothing is applied until
+   the user clicks the per-field Save button that appears when a value changes,
+   so an edit is never committed by accident. */
 let _cfgData = null;
+let _cfgFlat = {};            // key -> spec (original server value)
+let _cfgRestartPending = false;
 
 function _cfgRiskLevel(spec, val) {
-  if (!spec.risk || typeof val !== 'number') return 'ok';
+  if (!spec.risk || typeof val !== 'number' || !isFinite(val)) return 'ok';
   const above = spec.risk.direction === 'above';
   if (above ? val > spec.risk.red : val < spec.risk.red) return 'down';
   if (above ? val > spec.risk.orange : val < spec.risk.orange) return 'warn';
   return 'ok';
+}
+
+// Human, translated rendering of a value (∞ for the infinite sentinel).
+function _cfgFmtValue(spec, val) {
+  if (spec.infinite_at != null && val === spec.infinite_at) return '∞';
+  return String(val);
 }
 
 function _cfgInput(s) {
@@ -953,7 +968,7 @@ function _cfgInput(s) {
       `</select>`;
   }
   if (s.type === 'str') {
-    return `<input type="text" id="${id}" class="config-text" value="${esc(String(s.value))}">`;
+    return `<input type="text" id="${id}" class="config-text" value="${escAttr(String(s.value))}">`;
   }
   const step = s.step != null ? s.step : (s.type === 'float' ? 0.1 : 1);
   return `<input type="number" id="${id}" class="config-num" value="${s.value}"` +
@@ -962,13 +977,14 @@ function _cfgInput(s) {
 
 function _cfgRow(s) {
   const risk = _cfgRiskLevel(s, s.value);
-  const badges = [];
-  if (s.restart) badges.push(`<span class="badge config-badge">${esc(t('restart required'))}</span>`);
-  if (s.overridden) badges.push(`<button class="btn btn-sm config-reset" data-key="${s.key}">${esc(t('reset'))}</button>`);
+  const infBtn = (s.infinite_at != null)
+    ? `<button class="btn btn-sm config-inf" type="button" data-key="${s.key}" title="${escAttr(t('Set to unlimited'))}">∞</button>` : '';
   const rec = s.recommended != null && s.type !== 'bool'
-    ? `<small class="config-rec">${esc(t('recommended'))} ${esc(String(s.recommended))}${s.unit ? ' ' + esc(s.unit) : ''}</small>` : '';
-  const warn = risk === 'down'
-    ? `<small class="config-warn">${esc(t('Real risk that archive.org blocks your IP.'))}</small>` : '';
+    ? `<small class="config-rec">${esc(t('recommended'))} ${esc(_cfgFmtValue(s, s.recommended))}${s.unit ? ' ' + esc(t(s.unit)) : ''}</small>` : '';
+  const warn = `<small class="config-warn" ${risk === 'down' ? '' : 'hidden'}>${esc(t('Real risk that archive.org blocks your IP.'))}</small>`;
+  const restartBadge = s.restart ? `<span class="badge config-badge">${esc(t('restart required'))}</span>` : '';
+  const resetBtn = `<button class="btn btn-sm config-reset" type="button" data-key="${s.key}" ${s.overridden ? '' : 'hidden'}>${esc(t('reset'))}</button>`;
+  const saveBtn = `<button class="btn btn-sm btn-accent config-save" type="button" data-key="${s.key}" hidden>${esc(t('Save'))}</button>`;
   return `
     <div class="config-row" data-key="${s.key}">
       <div class="config-info">
@@ -980,11 +996,37 @@ function _cfgRow(s) {
         <span class="config-ctl-line">
           ${s.risk ? `<span class="hs-dot ${risk}"></span>` : ''}
           ${_cfgInput(s)}
-          ${s.unit ? `<span class="config-unit">${esc(s.unit)}</span>` : ''}
+          ${s.unit ? `<span class="config-unit">${esc(t(s.unit))}</span>` : ''}
+          ${infBtn}
         </span>
-        ${rec}${badges.join('')}
+        ${rec}${restartBadge}${saveBtn}${resetBtn}
       </div>
     </div>`;
+}
+
+function _cfgReadInput(spec, el) {
+  if (spec.type === 'bool') return el.checked;
+  if (spec.type === 'int') return parseInt(el.value, 10);
+  if (spec.type === 'float') return parseFloat(el.value);
+  return el.value;
+}
+
+// A row is dirty when its input differs from the server value. Toggles the
+// per-field Save button and refreshes the live risk dot.
+function _cfgRefreshRow(row) {
+  const key = row.dataset.key;
+  const spec = _cfgFlat[key];
+  const el = row.querySelector('input, select');
+  const save = row.querySelector('.config-save');
+  const val = _cfgReadInput(spec, el);
+  const numBad = (spec.type === 'int' || spec.type === 'float') && !isFinite(val);
+  const dirty = !numBad && val !== spec.value;
+  if (save) save.hidden = !dirty;
+  row.classList.toggle('dirty', dirty);
+  const dot = row.querySelector('.hs-dot');
+  if (dot) dot.className = 'hs-dot ' + _cfgRiskLevel(spec, val);
+  const warn = row.querySelector('.config-warn');
+  if (warn) warn.hidden = _cfgRiskLevel(spec, val) !== 'down';
 }
 
 async function renderConfigPage() {
@@ -1001,35 +1043,36 @@ async function renderConfigPage() {
     return;
   }
   disabledEl.hidden = true;
+  _cfgFlat = {};
+  _cfgData.groups.forEach(g => g.settings.forEach(s => { _cfgFlat[s.key] = s; }));
   groupsEl.innerHTML = _cfgData.groups.map(g => `
     <section class="scope-card config-group">
       <div class="scope-card-title">${esc(t(g.title))}</div>
       <div class="config-rows">${g.settings.map(_cfgRow).join('')}</div>
     </section>`).join('');
-  const flat = {};
-  _cfgData.groups.forEach(g => g.settings.forEach(s => { flat[s.key] = s; }));
-  groupsEl.querySelectorAll('input, select').forEach(el => {
-    el.addEventListener('change', () => {
-      const key = el.id.replace('cfg-', '');
-      const spec = flat[key];
-      let value;
-      if (spec.type === 'bool') value = el.checked;
-      else if (spec.type === 'int') value = parseInt(el.value, 10);
-      else if (spec.type === 'float') value = parseFloat(el.value);
-      else value = el.value;
-      if ((spec.type === 'int' || spec.type === 'float') && !isFinite(value)) { renderConfigPage(); return; }
-      _cfgSave({[key]: value});
-    });
+  groupsEl.querySelectorAll('.config-row').forEach(row => {
+    const el = row.querySelector('input, select');
+    if (el) el.addEventListener('input', () => _cfgRefreshRow(row));
+    if (el) el.addEventListener('change', () => _cfgRefreshRow(row));
   });
-  groupsEl.querySelectorAll('.config-reset').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      await fetch(API + '/api/config/reset', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({keys: [btn.dataset.key]}),
-      });
-      renderConfigPage();
+  groupsEl.querySelectorAll('.config-save').forEach(btn => btn.addEventListener('click', () => {
+    const key = btn.dataset.key;
+    const row = btn.closest('.config-row');
+    const val = _cfgReadInput(_cfgFlat[key], row.querySelector('input, select'));
+    _cfgSave({ [key]: val });
+  }));
+  groupsEl.querySelectorAll('.config-inf').forEach(btn => btn.addEventListener('click', () => {
+    const key = btn.dataset.key;
+    _cfgSave({ [key]: _cfgFlat[key].infinite_at });
+  }));
+  groupsEl.querySelectorAll('.config-reset').forEach(btn => btn.addEventListener('click', async () => {
+    await fetch(API + '/api/config/reset', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ keys: [btn.dataset.key] }),
     });
-  });
+    renderConfigPage();
+  }));
+  _cfgRenderRestartBar();
 }
 
 async function _cfgSave(values) {
@@ -1040,13 +1083,47 @@ async function _cfgSave(values) {
     });
     if (r.ok) {
       const d = await r.json();
-      if (d.restart_required && d.restart_required.length) $('config-restart-note').hidden = false;
+      if (d.restart_required && d.restart_required.length) _cfgRestartPending = true;
     } else {
       const d = await r.json().catch(() => ({}));
-      if (d.detail) alert(d.detail);
+      if (d.detail) showToast(d.detail);
     }
   } catch (_) {}
   renderConfigPage();
+}
+
+// Restart affordance: shown only once a saved setting needs a restart. The
+// server re-execs itself; we poll health and reload when it is back.
+function _cfgRenderRestartBar() {
+  const bar = $('config-restart-note');
+  if (!bar) return;
+  bar.hidden = !_cfgRestartPending;
+  bar.innerHTML = _cfgRestartPending
+    ? `<span>${esc(t('Some changed settings need a restart to take effect.'))}</span>`
+      + `<button class="btn btn-sm btn-accent" type="button" id="config-restart-btn">${esc(t('Restart now'))}</button>`
+    : '';
+  const btn = $('config-restart-btn');
+  if (btn) btn.addEventListener('click', _cfgRestartNow);
+}
+
+async function _cfgRestartNow() {
+  const bar = $('config-restart-note');
+  if (bar) bar.innerHTML = `<span>${esc(t('Restarting…'))}</span>`;
+  try {
+    await fetch(API + '/api/config/restart', { method: 'POST' });
+  } catch (_) {}
+  // The server is re-execing; wait for it to answer health again, then reload.
+  let tries = 0;
+  const poll = async () => {
+    tries += 1;
+    try {
+      const r = await fetch(API + '/api/health', { cache: 'no-store' });
+      if (r.ok) { location.reload(); return; }
+    } catch (_) {}
+    if (tries < 40) setTimeout(poll, 500);
+    else if (bar) bar.innerHTML = `<span>${esc(t('Restart is taking longer than expected. Reload the page manually.'))}</span>`;
+  };
+  setTimeout(poll, 1200);
 }
 
 async function configSafeValues() {

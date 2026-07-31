@@ -169,7 +169,8 @@ async def _persist_and_finish(job_id: str, start: float) -> None:
         await store.finish_job(job_id, duration_seconds=time.time() - start)
         return
     now = datetime.now(timezone.utc)
-    retention = timedelta(days=settings.scan_retention_days)
+    from store import retention_timedelta
+    retention = retention_timedelta()   # 0 retention days = keep forever
     # The example-domain scan is the permanent product demo: it must survive
     # the retention purge so the homepage "See an example" button always has
     # a report to open. Effectively never expires.

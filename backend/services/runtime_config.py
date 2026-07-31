@@ -38,6 +38,7 @@ class Tunable:
     hook: str | None = None         # rate_reset | sem_reset
     risk: dict | None = None        # {"direction": "above"|"below", "orange": x, "red": y}
     choices: tuple = field(default_factory=tuple)
+    infinite_at: object = None      # value that means "unlimited" (e.g. 0), shown as ∞
 
 
 TUNABLES: dict[str, Tunable] = {
@@ -129,14 +130,12 @@ TUNABLES: dict[str, Tunable] = {
         "queue", "int", "Download-phase budget; past it the scan analyzes what it already has. 0 disables the budget.",
         recommended=0, min=0, max=86400, unit="s"),
     "scan_retention_days": Tunable(
-        "queue", "int", "How long finished scans are kept and reused.",
-        recommended=14, min=1, max=365, unit="days"),
+        "queue", "int", "How long finished scans are kept and reused. 0 keeps them forever.",
+        recommended=14, min=0, max=3650, unit="days", infinite_at=0),
     "cleanup_interval_seconds": Tunable(
         "queue", "int", "Pause between expired-scan cleanup passes.",
         recommended=3600, min=60, max=86400, unit="s"),
     # --- advanced ----------------------------------------------------------
-    "example_scan_domain": Tunable(
-        "advanced", "str", "Domain whose scan is kept forever as the homepage example. Empty disables it."),
     "trust_cloudflare": Tunable(
         "advanced", "bool", "Trust Cloudflare headers for the client IP. Only behind Cloudflare.",
         recommended=False),

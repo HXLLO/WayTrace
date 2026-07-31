@@ -1,12 +1,18 @@
 """Self-host configuration panel API.
 
-GET  /api/config        - effective values + metadata, grouped by pipeline stage
-PUT  /api/config        - partial update {key: value}; validates, persists, applies hot
-POST /api/config/reset  - {"keys": [...]} drops those overrides ({} drops all)
+GET  /api/config         - effective values + metadata, grouped by pipeline stage
+PUT  /api/config         - partial update {key: value}; validates, persists, applies hot
+POST /api/config/reset   - {"keys": [...]} drops those overrides ({} drops all)
+POST /api/config/restart - re-exec the server so restart-required settings take effect
 
 Every endpoint 404s when config_panel_enabled is off (the hosted service).
 """
+import asyncio
+import os
+import sys
+
 from fastapi import APIRouter, HTTPException, Request
+from loguru import logger
 
 from config import settings
 from services import runtime_config
@@ -39,6 +45,7 @@ def _describe(key: str, spec: runtime_config.Tunable) -> dict:
         "unit": spec.unit,
         "restart": spec.restart,
         "risk": spec.risk,
+        "infinite_at": spec.infinite_at,
         "choices": list(spec.choices) or None,
         "overridden": key in runtime_config.overrides(),
         "desc": spec.desc,
@@ -82,3 +89,22 @@ async def reset_config(request: Request):
         raise HTTPException(status_code=400, detail="keys must be a list")
     await runtime_config.reset_keys(keys)
     return {"ok": True}
+
+
+async def _reexec_soon() -> None:
+    # Let the HTTP response flush, then replace this process with a fresh copy
+    # of the exact command that started it. os.execv works the same whether the
+    # server runs bare (uvicorn), under Docker, or behind a process manager, so
+    # the restart is portable and does not depend on the deployment.
+    await asyncio.sleep(0.4)
+    logger.info("Restarting: re-exec {} {}", sys.executable, sys.argv)
+    os.execv(sys.executable, [sys.executable] + sys.argv)
+
+
+@router.post("/api/config/restart")
+async def restart_server():
+    """Restart the server so restart-required settings take effect. Self-host
+    only (the panel is disabled on the hosted build)."""
+    _guard()
+    asyncio.get_event_loop().create_task(_reexec_soon())
+    return {"restarting": True}

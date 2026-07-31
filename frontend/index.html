@@ -99,7 +99,7 @@
     </div>
     <p class="home-wayback"><span data-i18n="home.archivedby">Data archived by</span> <a href="https://web.archive.org" target="_blank" rel="noopener"><img class="wb-logo" src="/icons/wayback.svg" alt="Wayback Machine"></a></p>
     <p class="home-caption" data-i18n-html="home.caption">Public data only &middot; <a href="#/legal">Legal &amp; licence</a></p>
-    <p class="home-version" data-i18n-html="home.version">WayTrace v1.7.7 &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">themes</a></p>
+    <p class="home-version" data-i18n-html="home.version">WayTrace v1.7.8 &middot; <a href="https://github.com/thomashousset/WayTrace" target="_blank" rel="noopener">source</a> &middot; <a href="#/themes">themes</a></p>
     <p class="home-provenance" data-i18n="home.provenance">Open-source OSINT tool.</p>
   </div>
 
@@ -249,9 +249,9 @@
 <div id="view-config" class="view">
   <div class="themes-page">
     <h1 data-i18n="config.title">Settings</h1>
-    <p class="themes-sub" data-i18n="config.sub">Every scan and archive.org setting of this install, applied live and saved locally. Values in the orange zone are aggressive; the red zone carries a real risk that archive.org blocks your IP. Your machine, your rules.</p>
-    <div id="config-disabled" class="scope-cap-note" hidden data-i18n="config.disabled">The configuration panel is disabled on this instance.</div>
-    <p class="scope-cap-note is-capped" id="config-restart-note" hidden data-i18n="config.restartnote">Some changed settings only take effect after a server restart.</p>
+    <p class="themes-sub" data-i18n="config.sub">These defaults come from a lot of testing, but the whole point is that you can tune everything: every scan and archive.org setting of this install, saved locally and applied when you click Save. Values in the orange zone are aggressive; the red zone carries a real risk that archive.org blocks your IP. Your machine, your rules. If you find a better balance, share your experience.</p>
+    <div id="config-disabled" class="scope-cap-note" hidden data-i18n="config.disabled">The settings panel is disabled on this instance.</div>
+    <div class="scope-cap-note is-capped config-restart-bar" id="config-restart-note" hidden></div>
     <div id="config-groups"></div>
     <div class="themes-actions">
       <button class="btn" type="button" onclick="configSafeValues()" data-i18n="config.safe">Back to safe values</button>

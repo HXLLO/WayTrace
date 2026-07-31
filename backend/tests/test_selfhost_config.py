@@ -146,6 +146,25 @@ async def test_panel_disabled_returns_404(client):
     assert (await client.get("/api/config")).status_code == 404
     assert (await client.put("/api/config", json={"max_queue_total": 5})).status_code == 404
     assert (await client.post("/api/config/reset", json={})).status_code == 404
+    assert (await client.post("/api/config/restart", json={})).status_code == 404
+
+
+def test_example_scan_domain_not_in_panel():
+    # It was removed once the homepage example gave way to the scan history.
+    assert "example_scan_domain" not in runtime_config.TUNABLES
+
+
+@pytest.mark.asyncio
+async def test_retention_zero_is_accepted_and_infinite(client):
+    from store import retention_timedelta
+    r = await client.put("/api/config", json={"scan_retention_days": 0})
+    assert r.status_code == 200
+    assert settings.scan_retention_days == 0
+    # 0 days must mean "keep forever", i.e. a very long horizon, never < a year.
+    assert retention_timedelta().days > 3650
+    d = (await client.get("/api/config")).json()
+    flat = {s["key"]: s for g in d["groups"] for s in g["settings"]}
+    assert flat["scan_retention_days"]["infinite_at"] == 0
 
 
 @pytest.mark.asyncio
